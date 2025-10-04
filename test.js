@@ -267,16 +267,12 @@ test('composable pipes - higher-order pipe composition', async () => {
   const multiply = asPipe((x, n) => x * n);
   const square = asPipe(x => x * x);
   
-  // Create a composed pipe that performs multiple operations
-  // Now we can return the pipeline token directly without .run()
-  const complexCalc = asPipe((value) => {
-    let result;
-    (result = pipe(value))
-      | add(5)
-      | multiply(2)
-      | square;
-    return result;
-  });
+  // Create a composed pipe - clean syntax without variable assignment
+  const complexCalc = asPipe((value) => pipe(value)
+    | add(5)
+    | multiply(2)
+    | square
+  );
   
   // Use the composed pipe in a new pipeline
   let finalResult;
@@ -297,15 +293,12 @@ test('composable pipes - bot-like pattern with mock data', async () => {
   const extract = asPipe((data, key) => data.response[key]);
   const trim = asPipe(s => typeof s === 'string' ? s.trim() : s);
   
-  // Compose a reusable bot pipe - returning pipeline token directly
-  const botPipe = asPipe((endpoint, payload) => {
-    let result;
-    (result = pipe(endpoint))
-      | postJson(payload)
-      | extract('result')
-      | trim;
-    return result;
-  });
+  // Compose a reusable bot pipe - clean direct syntax
+  const botPipe = asPipe((endpoint, payload) => pipe(endpoint)
+    | postJson(payload)
+    | extract('result')
+    | trim
+  );
   
   // Use the composed bot pipe in a pipeline
   let response;
@@ -321,12 +314,8 @@ test('composable pipes - pipe used directly as operator', async () => {
   const add = asPipe((x, n) => x + n);
   const mul = asPipe((x, n) => x * n);
   
-  // Create a composable pipe that uses pipe directly
-  const calculate = asPipe((value) => {
-    let result;
-    (result = pipe(value)) | add(10) | mul(2);
-    return result;  // Returns pipeline token, auto-executed
-  });
+  // Create a composable pipe using direct pipeline expression
+  const calculate = asPipe((value) => pipe(value) | add(10) | mul(2));
   
   // Use in a larger pipeline
   let final;
