@@ -132,8 +132,7 @@ const { pipe, asPipe } = createAsPipes()
 const upper = asPipe(s => s.toUpperCase())
 const ex    = asPipe((s, mark='!') => s + mark)
 
-const greeting =
-  pipe('hello')
+const greeting = pipe('hello')
   | upper
   | ex('!!!')
 
@@ -146,8 +145,7 @@ console.log(await greeting.run()) // "HELLO!!!"
 const inc = asPipe(x => x + 1)
 const mul = asPipe((x, k) => x * k)
 
-const calc =
-  pipe(3)
+const calc = pipe(3)
   | inc
   | mul(10)
 
@@ -177,8 +175,7 @@ const BODY = {
   ]
 };
 
-const haiku =
-  pipe(ENDPOINT)
+const haiku = pipe(ENDPOINT)
   | postJson(BODY)
   | toJson
   | pick('choices', 0, 'message', 'content')
