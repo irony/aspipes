@@ -1,15 +1,15 @@
-import { createHackPipes } from './index.js';
+import { createAsPipes } from './index.js';
 import { strict as assert } from 'node:assert';
 import { test } from 'node:test';
 
-test('createHackPipes returns pipe and asPipe functions', () => {
-  const { pipe, asPipe } = createHackPipes();
+test('createAsPipes returns pipe and asPipe functions', () => {
+  const { pipe, asPipe } = createAsPipes();
   assert.equal(typeof pipe, 'function');
   assert.equal(typeof asPipe, 'function');
 });
 
 test('basic string pipeline - uppercase', async () => {
-  const { pipe, asPipe } = createHackPipes();
+  const { pipe, asPipe } = createAsPipes();
   const upper = asPipe(s => s.toUpperCase());
   
   let result;
@@ -18,7 +18,7 @@ test('basic string pipeline - uppercase', async () => {
 });
 
 test('string pipeline with multiple operations', async () => {
-  const { pipe, asPipe } = createHackPipes();
+  const { pipe, asPipe } = createAsPipes();
   const upper = asPipe(s => s.toUpperCase());
   const ex = asPipe((s, mark='!') => s + mark);
   
@@ -28,7 +28,7 @@ test('string pipeline with multiple operations', async () => {
 });
 
 test('string pipeline with default parameter', async () => {
-  const { pipe, asPipe } = createHackPipes();
+  const { pipe, asPipe } = createAsPipes();
   const upper = asPipe(s => s.toUpperCase());
   const ex = asPipe((s, mark='!') => s + mark);
   
@@ -38,7 +38,7 @@ test('string pipeline with default parameter', async () => {
 });
 
 test('numeric pipeline - increment', async () => {
-  const { pipe, asPipe } = createHackPipes();
+  const { pipe, asPipe } = createAsPipes();
   const inc = asPipe(x => x + 1);
   
   let result;
@@ -47,7 +47,7 @@ test('numeric pipeline - increment', async () => {
 });
 
 test('numeric pipeline with multiplication', async () => {
-  const { pipe, asPipe } = createHackPipes();
+  const { pipe, asPipe } = createAsPipes();
   const inc = asPipe(x => x + 1);
   const mul = asPipe((x, k) => x * k);
   
@@ -57,7 +57,7 @@ test('numeric pipeline with multiplication', async () => {
 });
 
 test('async pipeline', async () => {
-  const { pipe, asPipe } = createHackPipes();
+  const { pipe, asPipe } = createAsPipes();
   const asyncDouble = asPipe(async x => {
     return new Promise(resolve => {
       setTimeout(() => resolve(x * 2), 10);
@@ -70,7 +70,7 @@ test('async pipeline', async () => {
 });
 
 test('mixed sync and async pipeline', async () => {
-  const { pipe, asPipe } = createHackPipes();
+  const { pipe, asPipe } = createAsPipes();
   const inc = asPipe(x => x + 1);
   const asyncDouble = asPipe(async x => {
     return new Promise(resolve => {
@@ -85,7 +85,7 @@ test('mixed sync and async pipeline', async () => {
 });
 
 test('object pipeline', async () => {
-  const { pipe, asPipe } = createHackPipes();
+  const { pipe, asPipe } = createAsPipes();
   const addProperty = asPipe((obj, key, value) => ({ ...obj, [key]: value }));
   
   let result;
@@ -97,7 +97,7 @@ test('object pipeline', async () => {
 });
 
 test('array pipeline', async () => {
-  const { pipe, asPipe } = createHackPipes();
+  const { pipe, asPipe } = createAsPipes();
   const map = asPipe((arr, fn) => arr.map(fn));
   const filter = asPipe((arr, fn) => arr.filter(fn));
   
@@ -111,7 +111,7 @@ test('array pipeline', async () => {
 });
 
 test('pick function for nested object access', async () => {
-  const { pipe, asPipe } = createHackPipes();
+  const { pipe, asPipe } = createAsPipes();
   const pick = asPipe((o, ...keys) => keys.reduce((a, k) => a?.[k], o));
   
   const obj = {
@@ -128,7 +128,7 @@ test('pick function for nested object access', async () => {
 });
 
 test('trim function', async () => {
-  const { pipe, asPipe } = createHackPipes();
+  const { pipe, asPipe } = createAsPipes();
   const trim = asPipe(s => typeof s === 'string' ? s.trim() : s);
   
   let result;
@@ -137,7 +137,7 @@ test('trim function', async () => {
 });
 
 test('trim function with non-string', async () => {
-  const { pipe, asPipe } = createHackPipes();
+  const { pipe, asPipe } = createAsPipes();
   const trim = asPipe(s => typeof s === 'string' ? s.trim() : s);
   
   let result;
@@ -146,7 +146,7 @@ test('trim function with non-string', async () => {
 });
 
 test('isolated pipeline contexts', async () => {
-  const { pipe, asPipe } = createHackPipes();
+  const { pipe, asPipe } = createAsPipes();
   const inc = asPipe(x => x + 1);
   
   let pipeline1, pipeline2;
@@ -158,8 +158,8 @@ test('isolated pipeline contexts', async () => {
 });
 
 test('multiple isolated environments', async () => {
-  const env1 = createHackPipes();
-  const env2 = createHackPipes();
+  const env1 = createAsPipes();
+  const env2 = createAsPipes();
   
   const inc1 = env1.asPipe(x => x + 1);
   const inc2 = env2.asPipe(x => x + 2);
@@ -173,7 +173,7 @@ test('multiple isolated environments', async () => {
 });
 
 test('complex pipeline with multiple transformations', async () => {
-  const { pipe, asPipe } = createHackPipes();
+  const { pipe, asPipe } = createAsPipes();
   
   const upper = asPipe(s => s.toUpperCase());
   const split = asPipe((s, delim) => s.split(delim));
@@ -191,7 +191,7 @@ test('complex pipeline with multiple transformations', async () => {
 });
 
 test('error propagation in pipeline', async () => {
-  const { pipe, asPipe } = createHackPipes();
+  const { pipe, asPipe } = createAsPipes();
   const throwError = asPipe(() => {
     throw new Error('Test error');
   });
@@ -206,7 +206,7 @@ test('error propagation in pipeline', async () => {
 });
 
 test('promise rejection propagation', async () => {
-  const { pipe, asPipe } = createHackPipes();
+  const { pipe, asPipe } = createAsPipes();
   const rejectPromise = asPipe(async () => {
     throw new Error('Async error');
   });
@@ -221,13 +221,13 @@ test('promise rejection propagation', async () => {
 });
 
 test('identity pipeline', async () => {
-  const { pipe } = createHackPipes();
+  const { pipe } = createAsPipes();
   const result = pipe(42);
   assert.equal(await result.run(), 42);
 });
 
 test('chaining with zero arguments', async () => {
-  const { pipe, asPipe } = createHackPipes();
+  const { pipe, asPipe } = createAsPipes();
   const negate = asPipe(x => -x);
   
   let result;
@@ -236,7 +236,7 @@ test('chaining with zero arguments', async () => {
 });
 
 test('pipeline with boolean values', async () => {
-  const { pipe, asPipe } = createHackPipes();
+  const { pipe, asPipe } = createAsPipes();
   const not = asPipe(x => !x);
   
   let result;
@@ -245,7 +245,7 @@ test('pipeline with boolean values', async () => {
 });
 
 test('pipeline with null/undefined handling', async () => {
-  const { pipe, asPipe } = createHackPipes();
+  const { pipe, asPipe } = createAsPipes();
   const defaultValue = asPipe((x, def) => x ?? def);
   
   let result1, result2, result3;
