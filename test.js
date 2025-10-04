@@ -268,13 +268,14 @@ test('composable pipes - higher-order pipe composition', async () => {
   const square = asPipe(x => x * x);
   
   // Create a composed pipe that performs multiple operations
-  const complexCalc = asPipe(async (value) => {
+  // Now we can return the pipeline token directly without .run()
+  const complexCalc = asPipe((value) => {
     let result;
     (result = pipe(value))
       | add(5)
       | multiply(2)
       | square;
-    return await result.run();
+    return result;
   });
   
   // Use the composed pipe in a new pipeline
@@ -296,14 +297,14 @@ test('composable pipes - bot-like pattern with mock data', async () => {
   const extract = asPipe((data, key) => data.response[key]);
   const trim = asPipe(s => typeof s === 'string' ? s.trim() : s);
   
-  // Compose a reusable bot pipe
-  const botPipe = asPipe(async (endpoint, payload) => {
+  // Compose a reusable bot pipe - returning pipeline token directly
+  const botPipe = asPipe((endpoint, payload) => {
     let result;
     (result = pipe(endpoint))
       | postJson(payload)
       | extract('result')
       | trim;
-    return await result.run();
+    return result;
   });
   
   // Use the composed bot pipe in a pipeline
@@ -312,5 +313,26 @@ test('composable pipes - bot-like pattern with mock data', async () => {
     | botPipe({ input: '  hello world  ' });
   
   assert.equal(await response.run(), 'HELLO WORLD');
+});
+
+test('composable pipes - pipe used directly as operator', async () => {
+  const { pipe, asPipe } = createAsPipes();
+  
+  const add = asPipe((x, n) => x + n);
+  const mul = asPipe((x, n) => x * n);
+  
+  // Create a composable pipe that uses pipe directly
+  const calculate = asPipe((value) => {
+    let result;
+    (result = pipe(value)) | add(10) | mul(2);
+    return result;  // Returns pipeline token, auto-executed
+  });
+  
+  // Use in a larger pipeline
+  let final;
+  (final = pipe(5)) | calculate | add(100);
+  
+  // (5 + 10) * 2 = 30, then 30 + 100 = 130
+  assert.equal(await final.run(), 130);
 });
 

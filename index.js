@@ -4,12 +4,26 @@ export function createAsPipes() {
   const asPipe = (fn) => new Proxy(function(){}, {
     get(_, prop) {
       if (prop === Symbol.toPrimitive)
-        return () => (stack.at(-1).steps.push(v => Promise.resolve(fn(v))), 0);
+        return () => (stack.at(-1).steps.push(async (v) => {
+          const result = await Promise.resolve(fn(v));
+          // If the function returns a pipeline token, execute it automatically
+          if (result && typeof result.run === 'function') {
+            return await result.run();
+          }
+          return result;
+        }), 0);
     },
     apply(_, __, args) {
       const t = function(){};
       t[Symbol.toPrimitive] =
-        () => (stack.at(-1).steps.push(v => Promise.resolve(fn(v, ...args))), 0);
+        () => (stack.at(-1).steps.push(async (v) => {
+          const result = await Promise.resolve(fn(v, ...args));
+          // If the function returns a pipeline token, execute it automatically
+          if (result && typeof result.run === 'function') {
+            return await result.run();
+          }
+          return result;
+        }), 0);
       return t;
     }
   });

@@ -94,12 +94,26 @@ export function createAsPipes() {
   const asPipe = (fn) => new Proxy(function(){}, {
     get(_, prop) {
       if (prop === Symbol.toPrimitive)
-        return () => (stack.at(-1).steps.push(v => Promise.resolve(fn(v))), 0)
+        return () => (stack.at(-1).steps.push(async (v) => {
+          const result = await Promise.resolve(fn(v))
+          // If the function returns a pipeline token, execute it automatically
+          if (result && typeof result.run === 'function') {
+            return await result.run()
+          }
+          return result
+        }), 0)
     },
     apply(_, __, args) {
       const t = function(){}
       t[Symbol.toPrimitive] =
-        () => (stack.at(-1).steps.push(v => Promise.resolve(fn(v, ...args))), 0)
+        () => (stack.at(-1).steps.push(async (v) => {
+          const result = await Promise.resolve(fn(v, ...args))
+          // If the function returns a pipeline token, execute it automatically
+          if (result && typeof result.run === 'function') {
+            return await result.run()
+          }
+          return result
+        }), 0)
       return t
     }
   })
@@ -186,7 +200,7 @@ console.log(await haiku.run())
 
 **D. Composable pipes (Higher-Order Pipes)**
 
-Pipes can be composed into reusable, named higher-order pipes by wrapping them with `asPipe`. This enables building complex pipelines from simpler ones:
+Pipes can be composed into reusable, named higher-order pipes by wrapping them with `asPipe`. When an `asPipe`-wrapped function returns a pipeline token, it's automatically executed, allowing clean composition without manual `.run()` calls:
 
 ```javascript
 const { pipe, asPipe } = createAsPipes()
@@ -204,7 +218,7 @@ const pick   = asPipe((o, ...keys) => keys.reduce((a,k)=>a?.[k], o))
 const trim   = asPipe(s => typeof s === 'string' ? s.trim() : s)
 
 // Compose a reusable bot pipe that combines multiple operations
-const botPipe = asPipe(async (endpoint, payload) => {
+const botPipe = asPipe((endpoint, payload) => {
   let result;
   (result = pipe(endpoint))
     | postJson(payload)
@@ -212,7 +226,7 @@ const botPipe = asPipe(async (endpoint, payload) => {
     | pick('choices', 0, 'message', 'content')
     | trim
   
-  return await result.run()
+  return result
 })
 
 // Use the composed bot pipe in a higher-level pipeline
