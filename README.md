@@ -14,12 +14,14 @@ It demonstrates that pipeline-style composition can be expressed using the exist
 
 The implementation is small (<50 lines) and supports both synchronous and asynchronous evaluation with a familiar syntax:
 
+```javascript
 const greeting =
   pipe('hello')
   | upper
   | ex('!!!');
 
 await greeting.run(); // → "HELLO!!!"
+```
 
 
 ⸻
@@ -50,10 +52,12 @@ createHackPipes()
 
 Creates an isolated pipeline environment and returns:
 
+```javascript
 {
   pipe,    // begin a pipeline
   asPipe   // lift a function into a pipeable form
 }
+```
 
 pipe(initialValue)
 
@@ -65,12 +69,16 @@ asPipe(fn)
 
 Wraps a function fn so that it can be used in a pipeline:
 
+```javascript
 const upper = asPipe(s => s.toUpperCase());
 const ex    = asPipe((s, mark='!') => s + mark);
+```
 
 Pipeable functions can also be called with arguments:
 
+```javascript
 pipe('hello') | upper | ex('!!!');
+```
 
 .run()
 
@@ -80,6 +88,7 @@ Evaluates the accumulated transformations sequentially, returning a Promise of t
 
 ## 5  Reference Implementation
 
+```javascript
 export function createHackPipes() {
   const stack = [];
 
@@ -109,14 +118,16 @@ export function createHackPipes() {
 
   return { pipe, asPipe };
 }
+```
 
 
 ⸻
 
 ## 6  Examples
 
-A. String pipeline
+**A. String pipeline**
 
+```javascript
 const { pipe, asPipe } = createHackPipes();
 
 const upper = asPipe(s => s.toUpperCase());
@@ -128,9 +139,11 @@ const greeting =
   | ex('!!!');
 
 console.log(await greeting.run()); // "HELLO!!!"
+```
 
-B. Numeric pipeline
+**B. Numeric pipeline**
 
+```javascript
 const inc = asPipe(x => x + 1);
 const mul = asPipe((x, k) => x * k);
 
@@ -140,9 +153,11 @@ const calc =
   | mul(10);
 
 console.log(await calc.run()); // 40
+```
 
-C. Async composition (LLM API call)
+**C. Async composition (LLM API call)**
 
+```javascript
 const postJson = asPipe((url, body, headers={}) =>
   fetch(url, {
     method: 'POST',
@@ -171,6 +186,7 @@ const haiku =
   | trim;
 
 console.log(await haiku.run());
+```
 
 
 ⸻
@@ -181,7 +197,9 @@ Each pipe() call creates a private evaluation context { v, steps[] }.
 Every pipeable function registers a transformation when coerced by |.
 .run() folds the step list into a promise chain:
 
+```
 value₀ → step₁(value₀) → step₂(value₁) → … → result
+```
 
 Each step may return either a value or a promise.
 Evaluation order is strict left-to-right, with promise resolution between steps.
