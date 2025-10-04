@@ -4,14 +4,21 @@
   "description": "A runtime experiment in pipeline semantics for JavaScript",
   "type": "module",
   "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./stream": "./stream.js"
+  },
   "scripts": {
-    "test": "node --test test.js"
+    "test": "node --test test.js stream.test.js"
   },
   "keywords": [
     "pipeline",
     "operator",
     "composition",
-    "functional"
+    "functional",
+    "reactive",
+    "streams",
+    "generators"
   ],
   "author": "Christian Landgren",
   "license": "MIT",

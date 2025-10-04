@@ -265,10 +265,82 @@ This pattern demonstrates:
 - **Abstraction**: Complex multi-step operations hidden behind simple interfaces
 - **Reusability**: Each composed pipe can be used independently or as part of larger workflows
 
+**E. Stream processing with async generators (Functional Reactive Programming)**
+
+The asPipes library includes stream support for working with async generators, enabling functional reactive programming patterns:
+
+```javascript
+import { createAsPipes } from './index.js';
+import { createStreamPipes, eventStream } from './stream.js';
+
+const { pipe, asPipe } = createAsPipes();
+const { map, filter, take, scan } = createStreamPipes(asPipe);
+
+// Process an endless stream of events
+async function* eventGenerator() {
+  let id = 0;
+  while (true) {
+    yield { id: id++, type: id % 3 === 0 ? 'special' : 'normal' };
+  }
+}
+
+// Take first 3 "special" events
+const result = pipe(eventGenerator())
+  | filter(e => e.type === 'special')
+  | map(e => e.id)
+  | take(3);
+
+const stream = await result.run();
+for await (const id of stream) {
+  console.log(id); // 0, 3, 6
+}
+```
+
+**F. Mouse event stream processing**
+
+```javascript
+// Simulate mouse drag tracking
+const events = [
+  { type: 'mousedown', x: 10, y: 10 },
+  { type: 'mousemove', x: 15, y: 15 },
+  { type: 'mousemove', x: 20, y: 20 },
+  { type: 'mouseup', x: 20, y: 20 },
+];
+
+let isDragging = false;
+const trackDrag = e => {
+  if (e.type === 'mousedown') isDragging = true;
+  if (e.type === 'mouseup') isDragging = false;
+  return isDragging && e.type === 'mousemove';
+};
+
+const result = pipe(eventStream(events))
+  | filter(trackDrag)
+  | map(e => ({ x: e.x, y: e.y }));
+
+const stream = await result.run();
+const positions = [];
+for await (const pos of stream) {
+  positions.push(pos); // [{ x: 15, y: 15 }, { x: 20, y: 20 }]
+}
+```
+
+**Stream Functions**
+
+The `stream.js` module provides these generator-based aspipe functions:
+
+- **map(iterable, fn)** - Transform each item in the stream
+- **filter(iterable, predicate)** - Filter items based on a condition
+- **take(iterable, n)** - Take the first n items from a stream
+- **scan(iterable, reducer, initial)** - Accumulate values, yielding intermediate results
+- **reduce(iterable, reducer, initial)** - Reduce stream to a single value
+
+These functions work seamlessly with async generators, enabling reactive patterns like waiting for specific events in an endless stream.
+
 
 ⸻
 
-## 8  Semantics
+## 7  Semantics
 
 Each pipe() call creates a private evaluation context { v, steps[] }.
 Every pipeable function registers a transformation when coerced by |.
@@ -283,7 +355,7 @@ Evaluation order is strict left-to-right, with promise resolution between steps.
 
 ⸻
 
-## 9  Motivation and Design Notes
+## 8  Motivation and Design Notes
 
 Why use Symbol.toPrimitive?
 Because bitwise operators force primitive coercion and can be intercepted per-object, giving a hook for sequencing without syntax modification.
@@ -302,7 +374,7 @@ Limitations:
 
 ⸻
 
-## 10  Open Questions
+## 9  Open Questions
 
 1. Could a future ECMAScript grammar support a similar deferred evaluation model natively?
 2. What would static analyzers and TypeScript need to infer such pipeline types?
@@ -311,7 +383,7 @@ Limitations:
 
 ⸻
 
-## 11  Conclusion
+## 10  Conclusion
 
 asPipes is not a syntax proposal but a runtime prototype — a living example of how far JavaScript can stretch to approximate future language constructs using only what’s already standardized.
 
@@ -323,7 +395,7 @@ It demonstrates that:
 
 ⸻
 
-## 12  License
+## 11  License
 
 MIT © 2025
 This document is non-normative and intended for exploration and discussion within the JavaScript community.
