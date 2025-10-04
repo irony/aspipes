@@ -184,10 +184,69 @@ const haiku = pipe(ENDPOINT)
 console.log(await haiku.run())
 ```
 
+**D. Composable pipes (Higher-Order Pipes)**
+
+Pipes can be composed into reusable, named higher-order pipes by wrapping them with `asPipe`. This enables building complex pipelines from simpler ones:
+
+```javascript
+const { pipe, asPipe } = createAsPipes()
+
+// Basic building blocks
+const postJson = asPipe((url, body, headers={}) =>
+  fetch(url, {
+    method: 'POST',
+    headers: { 'content-type':'application/json', ...headers },
+    body: JSON.stringify(body)
+  })
+)
+const toJson = asPipe(r => r.json())
+const pick   = asPipe((o, ...keys) => keys.reduce((a,k)=>a?.[k], o))
+const trim   = asPipe(s => typeof s === 'string' ? s.trim() : s)
+
+// Compose a reusable bot pipe that combines multiple operations
+const botPipe = asPipe(async (endpoint, payload) => {
+  let result;
+  (result = pipe(endpoint))
+    | postJson(payload)
+    | toJson
+    | pick('choices', 0, 'message', 'content')
+    | trim
+  
+  return await result.run()
+})
+
+// Use the composed bot pipe in a higher-level pipeline
+const ENDPOINT = 'https://api.berget.ai/v1/chat/completions'
+const PAYLOAD = {
+  model: 'gpt-oss',
+  messages: [
+    { role: 'system', content: 'Reply briefly.' },
+    { role: 'user',   content: 'Write a haiku about mountains.' }
+  ]
+}
+
+const response = pipe({ endpoint: ENDPOINT, payload: PAYLOAD })
+  | asPipe(config => botPipe(config.endpoint, config.payload))
+
+console.log(await response.run())
+// Outputs the AI-generated haiku text
+
+// Alternative: use botPipe directly in a pipeline
+const directResponse = pipe(ENDPOINT)
+  | botPipe(PAYLOAD)
+
+console.log(await directResponse.run())
+```
+
+This pattern demonstrates:
+- **Composability**: Small pipes combine into larger, reusable ones
+- **Abstraction**: Complex operations hidden behind simple interfaces
+- **Flexibility**: Composed pipes work seamlessly in new pipelines
+
 
 ⸻
 
-## 7  Semantics
+## 8  Semantics
 
 Each pipe() call creates a private evaluation context { v, steps[] }.
 Every pipeable function registers a transformation when coerced by |.
@@ -202,7 +261,7 @@ Evaluation order is strict left-to-right, with promise resolution between steps.
 
 ⸻
 
-## 8  Motivation and Design Notes
+## 9  Motivation and Design Notes
 
 Why use Symbol.toPrimitive?
 Because bitwise operators force primitive coercion and can be intercepted per-object, giving a hook for sequencing without syntax modification.
@@ -220,7 +279,7 @@ Limitations:
 
 ⸻
 
-## 9  Open Questions
+## 10  Open Questions
 
 	1.	Could a future ECMAScript grammar support a similar deferred evaluation model natively?
 	2.	What would static analyzers and TypeScript need to infer such pipeline types?
@@ -229,7 +288,7 @@ Limitations:
 
 ⸻
 
-## 10  Conclusion
+## 11  Conclusion
 
 asPipes is not a syntax proposal but a runtime prototype — a living example of how far JavaScript can stretch to approximate future language constructs using only what’s already standardized.
 
@@ -240,7 +299,7 @@ It demonstrates that:
 
 ⸻
 
-## 11  License
+## 12  License
 
 MIT © 2025
 This document is non-normative and intended for exploration and discussion within the JavaScript community.

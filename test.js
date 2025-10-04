@@ -259,3 +259,58 @@ test('pipeline with null/undefined handling', async () => {
   assert.equal(await result3.run(), 'value');
 });
 
+test('composable pipes - higher-order pipe composition', async () => {
+  const { pipe, asPipe } = createAsPipes();
+  
+  // Basic building blocks
+  const add = asPipe((x, n) => x + n);
+  const multiply = asPipe((x, n) => x * n);
+  const square = asPipe(x => x * x);
+  
+  // Create a composed pipe that performs multiple operations
+  const complexCalc = asPipe(async (value) => {
+    let result;
+    (result = pipe(value))
+      | add(5)
+      | multiply(2)
+      | square;
+    return await result.run();
+  });
+  
+  // Use the composed pipe in a new pipeline
+  let finalResult;
+  (finalResult = pipe(3)) | complexCalc;
+  
+  // (3 + 5) * 2 = 16, then 16^2 = 256
+  assert.equal(await finalResult.run(), 256);
+});
+
+test('composable pipes - bot-like pattern with mock data', async () => {
+  const { pipe, asPipe } = createAsPipes();
+  
+  // Mock fetch-like operations
+  const postJson = asPipe((data, body) => ({ 
+    ...data, 
+    response: { result: body.input.toUpperCase() } 
+  }));
+  const extract = asPipe((data, key) => data.response[key]);
+  const trim = asPipe(s => typeof s === 'string' ? s.trim() : s);
+  
+  // Compose a reusable bot pipe
+  const botPipe = asPipe(async (endpoint, payload) => {
+    let result;
+    (result = pipe(endpoint))
+      | postJson(payload)
+      | extract('result')
+      | trim;
+    return await result.run();
+  });
+  
+  // Use the composed bot pipe in a pipeline
+  let response;
+  (response = pipe({ url: 'mock-api', data: {} }))
+    | botPipe({ input: '  hello world  ' });
+  
+  assert.equal(await response.run(), 'HELLO WORLD');
+});
+
