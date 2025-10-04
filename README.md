@@ -1,12 +1,6 @@
 asPipes: working pipelines today in pure JavaScript
 ===
 
-  Author: Christian Landgren
-  Status: Stage 0 – Experimental runtime model
-  Last Updated: October 2025
-
-⸻
-
 ## 1  Summary
 
 asPipes is an experimental runtime abstraction that models the semantics of the proposed |> pipeline operator, implemented entirely in standard JavaScript (ES2020+).
