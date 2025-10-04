@@ -48,7 +48,7 @@ The asPipes experiment aims to:
 
 ## 4  Core API
 
-createHackPipes()
+createAsPipes()
 
 Creates an isolated pipeline environment and returns:
 
@@ -89,7 +89,7 @@ Evaluates the accumulated transformations sequentially, returning a Promise of t
 ## 5  Reference Implementation
 
 ```javascript
-export function createHackPipes() {
+export function createAsPipes() {
   const stack = [];
 
   const asPipe = (fn) => new Proxy(function(){}, {
@@ -128,7 +128,7 @@ export function createHackPipes() {
 **A. String pipeline**
 
 ```javascript
-const { pipe, asPipe } = createHackPipes();
+const { pipe, asPipe } = createAsPipes();
 
 const upper = asPipe(s => s.toUpperCase());
 const ex    = asPipe((s, mark='!') => s + mark);

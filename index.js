@@ -1,4 +1,4 @@
-export function createHackPipes() {
+export function createAsPipes() {
   const stack = [];
 
   const asPipe = (fn) => new Proxy(function(){}, {
