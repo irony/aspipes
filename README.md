@@ -30,19 +30,19 @@ await greeting.run() // → "HELLO!!!"
 The pipeline operator proposal (tc39/proposal-pipeline-operator) has been under discussion for several years, exploring multiple variants (F#, Smart, Hack, etc.).
 The asPipes experiment aims to:
 
-	•	prototype F#-style semantics directly in today’s JavaScript;
-	•	study ergonomics and readability in real-world code;
-	•	show that deferred, referentially transparent composition can be achieved without syntax extensions; and
-	•	inform the design conversation with practical, user-level feedback.
+- prototype F#-style semantics directly in today’s JavaScript;
+- study ergonomics and readability in real-world code;
+- show that deferred, referentially transparent composition can be achieved without syntax extensions; and
+- inform the design conversation with practical, user-level feedback.
 
 ⸻
 
 ## 3  Design Goals
-	•	✅ Composable — each transformation behaves like a unary function of the previous result.
-	•	✅ Deferred — no execution until .run() is called.
-	•	✅ Async-safe — promises and async functions are first-class citizens.
-	•	✅ Stateless — no global mutation; every pipeline owns its own context.
-	•	✅ Ergonomic — visually aligns with the future |> operator.
+- ✅ Composable — each transformation behaves like a unary function of the previous result.
+- ✅ Deferred — no execution until .run() is called.
+- ✅ Async-safe — promises and async functions are first-class citizens.
+- ✅ Stateless — no global mutation; every pipeline owns its own context.
+- ✅ Ergonomic — visually aligns with the future |> operator.
 
 ⸻
 
@@ -216,18 +216,18 @@ It makes side effects explicit, keeps the evaluation lazy, and aligns with funct
 
 Limitations:
 
-	•	Doesn’t support arbitrary expressions on the right-hand side (only pipeable tokens).
-	•	Overuse may confuse tooling or linters.
-	•	Purely demonstrative — not intended for production.
+- Doesn’t support arbitrary expressions on the right-hand side (only pipeable tokens).
+- Overuse may confuse tooling or linters.
+- Purely demonstrative — not intended for production.
 
 ⸻
 
 ## 9  Open Questions
 
-	1.	Could a future ECMAScript grammar support a similar deferred evaluation model natively?
-	2.	What would static analyzers and TypeScript need to infer such pipeline types?
-	3.	Can the |> proposal benefit from runtime experiments like this to clarify ergonomics?
-	4.	Should .run() be implicit (auto-executed) or always explicit?
+1. Could a future ECMAScript grammar support a similar deferred evaluation model natively?
+2. What would static analyzers and TypeScript need to infer such pipeline types?
+3. Can the |> proposal benefit from runtime experiments like this to clarify ergonomics?
+4. Should .run() be implicit (auto-executed) or always explicit?
 
 ⸻
 
@@ -237,9 +237,9 @@ asPipes is not a syntax proposal but a runtime prototype — a living example of
 
 It demonstrates that:
 
-	•	The semantics of pipelines are composable and ergonomic in practice.
-	•	Async behavior integrates naturally.
-	•	The readability and cognitive flow of |> syntax can be validated today.
+- The semantics of pipelines are composable and ergonomic in practice.
+- Async behavior integrates naturally.
+- The readability and cognitive flow of |> syntax can be validated today.
 
 ⸻
 
