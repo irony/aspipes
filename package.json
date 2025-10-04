@@ -1,0 +1,21 @@
+{
+  "name": "aspipes",
+  "version": "1.0.0",
+  "description": "A runtime experiment in pipeline semantics for JavaScript",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "test": "node --test test.js"
+  },
+  "keywords": [
+    "pipeline",
+    "operator",
+    "composition",
+    "functional"
+  ],
+  "author": "Christian Landgren",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

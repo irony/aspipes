@@ -207,7 +207,7 @@ Limitations:
 ⸻
 
 ## 9  Open Questions
-9  Open Questions
+
 	1.	Could a future ECMAScript grammar support a similar deferred evaluation model natively?
 	2.	What would static analyzers and TypeScript need to infer such pipeline types?
 	3.	Can the |> proposal benefit from runtime experiments like this to clarify ergonomics?
