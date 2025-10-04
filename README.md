@@ -1,9 +1,9 @@
-asPipes: a runtime experiment in pipeline semantics for JavaScript
+asPipes: working pipelines today in pure JavaScript
 ===
 
-Author: Christian Landgren
-Status: Stage 0 – Experimental runtime model
-Last Updated: October 2025
+  Author: Christian Landgren
+  Status: Stage 0 – Experimental runtime model
+  Last Updated: October 2025
 
 ⸻
 
