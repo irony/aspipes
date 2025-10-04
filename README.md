@@ -15,12 +15,11 @@ It demonstrates that pipeline-style composition can be expressed using the exist
 The implementation is small (<50 lines) and supports both synchronous and asynchronous evaluation with a familiar syntax:
 
 ```javascript
-const greeting =
-  pipe('hello')
+const greeting = pipe('hello')
   | upper
-  | ex('!!!');
+  | ex('!!!')
 
-await greeting.run(); // → "HELLO!!!"
+await greeting.run() // → "HELLO!!!"
 ```
 
 
@@ -70,14 +69,14 @@ asPipe(fn)
 Wraps a function fn so that it can be used in a pipeline:
 
 ```javascript
-const upper = asPipe(s => s.toUpperCase());
-const ex    = asPipe((s, mark='!') => s + mark);
+const upper = asPipe(s => s.toUpperCase())
+const ex    = asPipe((s, mark='!') => s + mark)
 ```
 
 Pipeable functions can also be called with arguments:
 
 ```javascript
-pipe('hello') | upper | ex('!!!');
+pipe('hello') | upper | ex('!!!')
 ```
 
 .run()
@@ -90,33 +89,33 @@ Evaluates the accumulated transformations sequentially, returning a Promise of t
 
 ```javascript
 export function createAsPipes() {
-  const stack = [];
+  const stack = []
 
   const asPipe = (fn) => new Proxy(function(){}, {
     get(_, prop) {
       if (prop === Symbol.toPrimitive)
-        return () => (stack.at(-1).steps.push(v => Promise.resolve(fn(v))), 0);
+        return () => (stack.at(-1).steps.push(v => Promise.resolve(fn(v))), 0)
     },
     apply(_, __, args) {
-      const t = function(){};
+      const t = function(){}
       t[Symbol.toPrimitive] =
-        () => (stack.at(-1).steps.push(v => Promise.resolve(fn(v, ...args))), 0);
-      return t;
+        () => (stack.at(-1).steps.push(v => Promise.resolve(fn(v, ...args))), 0)
+      return t
     }
-  });
+  })
 
   const pipe = (x) => {
-    const ctx = { v: x, steps: [] };
+    const ctx = { v: x, steps: [] }
     const token = {
       [Symbol.toPrimitive]: () => (stack.push(ctx), 0),
       async run() {
-        return ctx.steps.reduce((p, f) => p.then(f), Promise.resolve(ctx.v));
+        return ctx.steps.reduce((p, f) => p.then(f), Promise.resolve(ctx.v))
       }
     };
-    return token;
+    return token
   };
 
-  return { pipe, asPipe };
+  return { pipe, asPipe }
 }
 ```
 
@@ -128,31 +127,31 @@ export function createAsPipes() {
 **A. String pipeline**
 
 ```javascript
-const { pipe, asPipe } = createAsPipes();
+const { pipe, asPipe } = createAsPipes()
 
-const upper = asPipe(s => s.toUpperCase());
-const ex    = asPipe((s, mark='!') => s + mark);
+const upper = asPipe(s => s.toUpperCase())
+const ex    = asPipe((s, mark='!') => s + mark)
 
 const greeting =
   pipe('hello')
   | upper
-  | ex('!!!');
+  | ex('!!!')
 
-console.log(await greeting.run()); // "HELLO!!!"
+console.log(await greeting.run()) // "HELLO!!!"
 ```
 
 **B. Numeric pipeline**
 
 ```javascript
-const inc = asPipe(x => x + 1);
-const mul = asPipe((x, k) => x * k);
+const inc = asPipe(x => x + 1)
+const mul = asPipe((x, k) => x * k)
 
 const calc =
   pipe(3)
   | inc
-  | mul(10);
+  | mul(10)
 
-console.log(await calc.run()); // 40
+console.log(await calc.run()) // 40
 ```
 
 **C. Async composition (LLM API call)**
@@ -165,11 +164,11 @@ const postJson = asPipe((url, body, headers={}) =>
     body: JSON.stringify(body)
   })
 );
-const toJson = asPipe(r => r.json());
-const pick   = asPipe((o, ...keys) => keys.reduce((a,k)=>a?.[k], o));
-const trim   = asPipe(s => typeof s === 'string' ? s.trim() : s);
+const toJson = asPipe(r => r.json())
+const pick   = asPipe((o, ...keys) => keys.reduce((a,k)=>a?.[k], o))
+const trim   = asPipe(s => typeof s === 'string' ? s.trim() : s)
 
-const ENDPOINT = 'https://api.berget.ai/v1/chat/completions';
+const ENDPOINT = 'https://api.berget.ai/v1/chat/completions'
 const BODY = {
   model: 'gpt-oss',
   messages: [
@@ -185,7 +184,7 @@ const haiku =
   | pick('choices', 0, 'message', 'content')
   | trim;
 
-console.log(await haiku.run());
+console.log(await haiku.run())
 ```
 
 
