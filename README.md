@@ -225,53 +225,50 @@ Pipes can be composed into reusable, named higher-order pipes by wrapping them w
 ```javascript
 const { pipe, asPipe } = createAsPipes()
 
-// Basic building blocks
-const postJson = asPipe((url, body, headers={}) =>
-  fetch(url, {
-    method: 'POST',
-    headers: { 'content-type':'application/json', ...headers },
-    body: JSON.stringify(body)
-  })
-)
-const toJson = asPipe(r => r.json())
-const pick   = asPipe((o, ...keys) => keys.reduce((a,k)=>a?.[k], o))
-const trim   = asPipe(s => typeof s === 'string' ? s.trim() : s)
+// Assume postJson, toJson, pick, trim are defined (see example C)
 
-// Compose a reusable bot pipe that combines multiple operations
-const botPipe = asPipe((endpoint, payload) => pipe(endpoint)
-  | postJson(payload)
+// Create reusable bot operations
+const askBot = asPipe((question) => pipe('https://api.berget.ai/v1/chat/completions')
+  | postJson({ 
+      model: 'gpt-oss', 
+      messages: [{ role: 'user', content: question }] 
+    })
   | toJson
   | pick('choices', 0, 'message', 'content')
   | trim
 )
 
-// Use the composed bot pipe in a higher-level pipeline
-const ENDPOINT = 'https://api.berget.ai/v1/chat/completions'
-const PAYLOAD = {
-  model: 'gpt-oss',
-  messages: [
-    { role: 'system', content: 'Reply briefly.' },
-    { role: 'user',   content: 'Write a haiku about mountains.' }
-  ]
-}
+const summarize = asPipe((text) => pipe('https://api.berget.ai/v1/chat/completions')
+  | postJson({ 
+      model: 'gpt-oss', 
+      messages: [
+        { role: 'system', content: 'Summarize in one sentence.' },
+        { role: 'user', content: text }
+      ] 
+    })
+  | toJson
+  | pick('choices', 0, 'message', 'content')
+  | trim
+)
 
-const response = pipe({ endpoint: ENDPOINT, payload: PAYLOAD })
-  | asPipe(config => botPipe(config.endpoint, config.payload))
+// Compose an agent that chains multiple bot operations
+const researchAgent = asPipe((topic) => pipe(`Research topic: ${topic}`)
+  | askBot
+  | summarize
+)
 
-console.log(await response.run())
-// Outputs the AI-generated haiku text
+// Use the composed agent in a pipeline
+let result;
+(result = pipe('quantum computing')) | researchAgent
 
-// Alternative: use botPipe directly in a pipeline
-const directResponse = pipe(ENDPOINT)
-  | botPipe(PAYLOAD)
-
-console.log(await directResponse.run())
+console.log(await result.run())
+// First asks bot about quantum computing, then summarizes the response
 ```
 
 This pattern demonstrates:
-- **Composability**: Small pipes combine into larger, reusable ones
-- **Abstraction**: Complex operations hidden behind simple interfaces
-- **Flexibility**: Composed pipes work seamlessly in new pipelines
+- **Composability**: Small pipes (`askBot`, `summarize`) combine into larger ones (`researchAgent`)
+- **Abstraction**: Complex multi-step operations hidden behind simple interfaces
+- **Reusability**: Each composed pipe can be used independently or as part of larger workflows
 
 
 ⸻
