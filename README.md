@@ -29,6 +29,7 @@ await greeting.run() // → "HELLO!!!"
 
 The pipeline operator proposal (tc39/proposal-pipeline-operator) has been under discussion for several years, exploring multiple variants (F#, Smart, Hack, etc.).
 The asPipes experiment aims to:
+
 	•	prototype F#-style semantics directly in today’s JavaScript;
 	•	study ergonomics and readability in real-world code;
 	•	show that deferred, referentially transparent composition can be achieved without syntax extensions; and
@@ -214,6 +215,7 @@ Why explicit .run()?
 It makes side effects explicit, keeps the evaluation lazy, and aligns with functional semantics (like Observable.subscribe() or Task.run()).
 
 Limitations:
+
 	•	Doesn’t support arbitrary expressions on the right-hand side (only pipeable tokens).
 	•	Overuse may confuse tooling or linters.
 	•	Purely demonstrative — not intended for production.
@@ -234,6 +236,7 @@ Limitations:
 asPipes is not a syntax proposal but a runtime prototype — a living example of how far JavaScript can stretch to approximate future language constructs using only what’s already standardized.
 
 It demonstrates that:
+
 	•	The semantics of pipelines are composable and ergonomic in practice.
 	•	Async behavior integrates naturally.
 	•	The readability and cognitive flow of |> syntax can be validated today.
