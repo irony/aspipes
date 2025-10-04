@@ -259,3 +259,69 @@ test('pipeline with null/undefined handling', async () => {
   assert.equal(await result3.run(), 'value');
 });
 
+test('composable pipes - higher-order pipe composition', async () => {
+  const { pipe, asPipe } = createAsPipes();
+  
+  // Basic building blocks
+  const add = asPipe((x, n) => x + n);
+  const multiply = asPipe((x, n) => x * n);
+  const square = asPipe(x => x * x);
+  
+  // Create a composed pipe - clean syntax without variable assignment
+  const complexCalc = asPipe((value) => pipe(value)
+    | add(5)
+    | multiply(2)
+    | square
+  );
+  
+  // Use the composed pipe in a new pipeline
+  let finalResult;
+  (finalResult = pipe(3)) | complexCalc;
+  
+  // (3 + 5) * 2 = 16, then 16^2 = 256
+  assert.equal(await finalResult.run(), 256);
+});
+
+test('composable pipes - bot-like pattern with mock data', async () => {
+  const { pipe, asPipe } = createAsPipes();
+  
+  // Mock fetch-like operations
+  const postJson = asPipe((data, body) => ({ 
+    ...data, 
+    response: { result: body.input.toUpperCase() } 
+  }));
+  const extract = asPipe((data, key) => data.response[key]);
+  const trim = asPipe(s => typeof s === 'string' ? s.trim() : s);
+  
+  // Compose a reusable bot pipe - clean direct syntax
+  const botPipe = asPipe((endpoint, payload) => pipe(endpoint)
+    | postJson(payload)
+    | extract('result')
+    | trim
+  );
+  
+  // Use the composed bot pipe in a pipeline
+  let response;
+  (response = pipe({ url: 'mock-api', data: {} }))
+    | botPipe({ input: '  hello world  ' });
+  
+  assert.equal(await response.run(), 'HELLO WORLD');
+});
+
+test('composable pipes - pipe used directly as operator', async () => {
+  const { pipe, asPipe } = createAsPipes();
+  
+  const add = asPipe((x, n) => x + n);
+  const mul = asPipe((x, n) => x * n);
+  
+  // Create a composable pipe using direct pipeline expression
+  const calculate = asPipe((value) => pipe(value) | add(10) | mul(2));
+  
+  // Use in a larger pipeline
+  let final;
+  (final = pipe(5)) | calculate | add(100);
+  
+  // (5 + 10) * 2 = 30, then 30 + 100 = 130
+  assert.equal(await final.run(), 130);
+});
+

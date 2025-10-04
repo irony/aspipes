@@ -95,12 +95,46 @@ export function createAsPipes() {
   const asPipe = (fn) => new Proxy(function(){}, {
     get(_, prop) {
       if (prop === Symbol.toPrimitive)
-        return () => (stack.at(-1).steps.push(v => Promise.resolve(fn(v))), 0)
+        return () => (stack.at(-1).steps.push(async (v) => {
+          const stackLengthBefore = stack.length
+          const result = await Promise.resolve(fn(v))
+          
+          // If a new pipeline was created during fn execution and result is 0
+          if (result === 0 && stack.length > stackLengthBefore) {
+            // Get the pipeline that was created and execute it
+            const pipelineCtx = stack[stack.length - 1]
+            stack.pop() // Remove from stack as we're executing it
+            return await pipelineCtx.steps.reduce((p, f) => p.then(f), Promise.resolve(pipelineCtx.v))
+          }
+          
+          // If the function returns a pipeline token, execute it automatically
+          if (result && typeof result.run === 'function') {
+            return await result.run()
+          }
+          return result
+        }), 0)
     },
     apply(_, __, args) {
       const t = function(){}
       t[Symbol.toPrimitive] =
-        () => (stack.at(-1).steps.push(v => Promise.resolve(fn(v, ...args))), 0)
+        () => (stack.at(-1).steps.push(async (v) => {
+          const stackLengthBefore = stack.length
+          const result = await Promise.resolve(fn(v, ...args))
+          
+          // If a new pipeline was created during fn execution and result is 0
+          if (result === 0 && stack.length > stackLengthBefore) {
+            // Get the pipeline that was created and execute it
+            const pipelineCtx = stack[stack.length - 1]
+            stack.pop() // Remove from stack as we're executing it
+            return await pipelineCtx.steps.reduce((p, f) => p.then(f), Promise.resolve(pipelineCtx.v))
+          }
+          
+          // If the function returns a pipeline token, execute it automatically
+          if (result && typeof result.run === 'function') {
+            return await result.run()
+          }
+          return result
+        }), 0)
       return t
     }
   })
@@ -185,10 +219,62 @@ const haiku = pipe(ENDPOINT)
 console.log(await haiku.run())
 ```
 
+**D. Composable pipes (Higher-Order Pipes)**
+
+Pipes can be composed into reusable, named higher-order pipes by wrapping them with `asPipe`. The implementation automatically detects and executes pipeline expressions, enabling clean, direct syntax:
+
+```javascript
+const { pipe, asPipe } = createAsPipes()
+
+// Assume postJson, toJson, pick, trim are defined (see example C)
+
+// Create reusable bot operations
+const askBot = asPipe((question) => pipe('https://api.berget.ai/v1/chat/completions')
+  | postJson({ 
+      model: 'gpt-oss', 
+      messages: [{ role: 'user', content: question }] 
+    })
+  | toJson
+  | pick('choices', 0, 'message', 'content')
+  | trim
+)
+
+const summarize = asPipe((text) => pipe('https://api.berget.ai/v1/chat/completions')
+  | postJson({ 
+      model: 'gpt-oss', 
+      messages: [
+        { role: 'system', content: 'Summarize in one sentence.' },
+        { role: 'user', content: text }
+      ] 
+    })
+  | toJson
+  | pick('choices', 0, 'message', 'content')
+  | trim
+)
+
+// Compose an agent that chains multiple bot operations
+const researchAgent = asPipe((topic) => pipe(`Research topic: ${topic}`)
+  | askBot
+  | summarize
+)
+
+// Use the composed agent in a pipeline
+let result;
+(result = pipe('quantum computing')) | researchAgent
+
+console.log(await result.run())
+// First asks bot about quantum computing, then summarizes the response
+```
+
+This pattern demonstrates:
+- **Composability**: Small pipes (`askBot`, `summarize`) combine into larger ones (`researchAgent`)
+- **Abstraction**: Complex multi-step operations hidden behind simple interfaces
+- **Reusability**: Each composed pipe can be used independently or as part of larger workflows
+
 
 ⸻
 
-## 7  Semantics
+## 8  Semantics
 
 Each pipe() call creates a private evaluation context { v, steps[] }.
 Every pipeable function registers a transformation when coerced by |.
@@ -203,7 +289,7 @@ Evaluation order is strict left-to-right, with promise resolution between steps.
 
 ⸻
 
-## 8  Motivation and Design Notes
+## 9  Motivation and Design Notes
 
 Why use Symbol.toPrimitive?
 Because bitwise operators force primitive coercion and can be intercepted per-object, giving a hook for sequencing without syntax modification.
@@ -222,7 +308,7 @@ Limitations:
 
 ⸻
 
-## 9  Open Questions
+## 10  Open Questions
 
 1. Could a future ECMAScript grammar support a similar deferred evaluation model natively?
 2. What would static analyzers and TypeScript need to infer such pipeline types?
@@ -231,7 +317,7 @@ Limitations:
 
 ⸻
 
-## 10  Conclusion
+## 11  Conclusion
 
 asPipes is not a syntax proposal but a runtime prototype — a living example of how far JavaScript can stretch to approximate future language constructs using only what’s already standardized.
 
@@ -243,7 +329,7 @@ It demonstrates that:
 
 ⸻
 
-## 11  License
+## 12  License
 
 MIT © 2025
 This document is non-normative and intended for exploration and discussion within the JavaScript community.
