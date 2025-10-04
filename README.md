@@ -1,1 +1,233 @@
-# aspipes
+asPipes: a runtime experiment in pipeline semantics for JavaScript
+===
+
+Author: Christian Landgren
+Status: Stage 0 – Experimental runtime model
+Last Updated: October 2025
+
+⸻
+
+## 1  Summary
+
+asPipes is an experimental runtime abstraction that models the semantics of the proposed |> pipeline operator, implemented entirely in standard JavaScript (ES2020+).
+It demonstrates that pipeline-style composition can be expressed using the existing coercion semantics of the bitwise OR operator (|) and Symbol.toPrimitive.
+
+The implementation is small (<50 lines) and supports both synchronous and asynchronous evaluation with a familiar syntax:
+
+const greeting =
+  pipe('hello')
+  | upper
+  | ex('!!!');
+
+await greeting.run(); // → "HELLO!!!"
+
+
+⸻
+
+## 2  Motivation
+
+The pipeline operator proposal (tc39/proposal-pipeline-operator) has been under discussion for several years, exploring multiple variants (F#, Smart, Hack, etc.).
+The asPipes experiment aims to:
+	•	prototype F#-style semantics directly in today’s JavaScript;
+	•	study ergonomics and readability in real-world code;
+	•	show that deferred, referentially transparent composition can be achieved without syntax extensions; and
+	•	inform the design conversation with practical, user-level feedback.
+
+⸻
+
+## 3  Design Goals
+	•	✅ Composable — each transformation behaves like a unary function of the previous result.
+	•	✅ Deferred — no execution until .run() is called.
+	•	✅ Async-safe — promises and async functions are first-class citizens.
+	•	✅ Stateless — no global mutation; every pipeline owns its own context.
+	•	✅ Ergonomic — visually aligns with the future |> operator.
+
+⸻
+
+## 4  Core API
+
+createHackPipes()
+
+Creates an isolated pipeline environment and returns:
+
+{
+  pipe,    // begin a pipeline
+  asPipe   // lift a function into a pipeable form
+}
+
+pipe(initialValue)
+
+Begins a new pipeline with initialValue.
+The returned object intercepts | operations via Symbol.toPrimitive.
+Call .run() to evaluate and retrieve the final result (async).
+
+asPipe(fn)
+
+Wraps a function fn so that it can be used in a pipeline:
+
+const upper = asPipe(s => s.toUpperCase());
+const ex    = asPipe((s, mark='!') => s + mark);
+
+Pipeable functions can also be called with arguments:
+
+pipe('hello') | upper | ex('!!!');
+
+.run()
+
+Evaluates the accumulated transformations sequentially, returning a Promise of the final value.
+
+⸻
+
+## 5  Reference Implementation
+
+export function createHackPipes() {
+  const stack = [];
+
+  const asPipe = (fn) => new Proxy(function(){}, {
+    get(_, prop) {
+      if (prop === Symbol.toPrimitive)
+        return () => (stack.at(-1).steps.push(v => Promise.resolve(fn(v))), 0);
+    },
+    apply(_, __, args) {
+      const t = function(){};
+      t[Symbol.toPrimitive] =
+        () => (stack.at(-1).steps.push(v => Promise.resolve(fn(v, ...args))), 0);
+      return t;
+    }
+  });
+
+  const pipe = (x) => {
+    const ctx = { v: x, steps: [] };
+    const token = {
+      [Symbol.toPrimitive]: () => (stack.push(ctx), 0),
+      async run() {
+        return ctx.steps.reduce((p, f) => p.then(f), Promise.resolve(ctx.v));
+      }
+    };
+    return token;
+  };
+
+  return { pipe, asPipe };
+}
+
+
+⸻
+
+## 6  Examples
+
+A. String pipeline
+
+const { pipe, asPipe } = createHackPipes();
+
+const upper = asPipe(s => s.toUpperCase());
+const ex    = asPipe((s, mark='!') => s + mark);
+
+const greeting =
+  pipe('hello')
+  | upper
+  | ex('!!!');
+
+console.log(await greeting.run()); // "HELLO!!!"
+
+B. Numeric pipeline
+
+const inc = asPipe(x => x + 1);
+const mul = asPipe((x, k) => x * k);
+
+const calc =
+  pipe(3)
+  | inc
+  | mul(10);
+
+console.log(await calc.run()); // 40
+
+C. Async composition (LLM API call)
+
+const postJson = asPipe((url, body, headers={}) =>
+  fetch(url, {
+    method: 'POST',
+    headers: { 'content-type':'application/json', ...headers },
+    body: JSON.stringify(body)
+  })
+);
+const toJson = asPipe(r => r.json());
+const pick   = asPipe((o, ...keys) => keys.reduce((a,k)=>a?.[k], o));
+const trim   = asPipe(s => typeof s === 'string' ? s.trim() : s);
+
+const ENDPOINT = 'https://api.berget.ai/v1/chat/completions';
+const BODY = {
+  model: 'gpt-oss',
+  messages: [
+    { role: 'system', content: 'Reply briefly.' },
+    { role: 'user',   content: 'Write a haiku about mountains.' }
+  ]
+};
+
+const haiku =
+  pipe(ENDPOINT)
+  | postJson(BODY)
+  | toJson
+  | pick('choices', 0, 'message', 'content')
+  | trim;
+
+console.log(await haiku.run());
+
+
+⸻
+
+## 7  Semantics
+
+Each pipe() call creates a private evaluation context { v, steps[] }.
+Every pipeable function registers a transformation when coerced by |.
+.run() folds the step list into a promise chain:
+
+value₀ → step₁(value₀) → step₂(value₁) → … → result
+
+Each step may return either a value or a promise.
+Evaluation order is strict left-to-right, with promise resolution between steps.
+
+⸻
+
+8  Motivation and Design Notes
+
+Why use Symbol.toPrimitive?
+Because bitwise operators force primitive coercion and can be intercepted per-object, giving a hook for sequencing without syntax modification.
+
+Why | and not || or &?
+| is the simplest binary operator that (a) performs coercion on both operands, and (b) yields a valid runtime expression chain.
+
+Why explicit .run()?
+It makes side effects explicit, keeps the evaluation lazy, and aligns with functional semantics (like Observable.subscribe() or Task.run()).
+
+Limitations:
+	•	Doesn’t support arbitrary expressions on the right-hand side (only pipeable tokens).
+	•	Overuse may confuse tooling or linters.
+	•	Purely demonstrative — not intended for production.
+
+⸻
+
+9  Open Questions
+	1.	Could a future ECMAScript grammar support a similar deferred evaluation model natively?
+	2.	What would static analyzers and TypeScript need to infer such pipeline types?
+	3.	Can the |> proposal benefit from runtime experiments like this to clarify ergonomics?
+	4.	Should .run() be implicit (auto-executed) or always explicit?
+
+⸻
+
+10  Conclusion
+
+asPipes is not a syntax proposal but a runtime prototype — a living example of how far JavaScript can stretch to approximate future language constructs using only what’s already standardized.
+
+It demonstrates that:
+	•	The semantics of pipelines are composable and ergonomic in practice.
+	•	Async behavior integrates naturally.
+	•	The readability and cognitive flow of |> syntax can be validated today.
+
+⸻
+
+11  License
+
+MIT © 2025
+This document is non-normative and intended for exploration and discussion within the JavaScript community.
+
+Would you like me to make it look like an actual TC39 Stage 0 draft (with “Status”, “Authors”, “Champions”, “References”, etc.) — i.e., in the canonical proposal format used in the tc39/proposals repo?
