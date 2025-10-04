@@ -15,6 +15,14 @@
   ],
   "author": "Christian Landgren",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/irony/aspipes.git"
+  },
+  "bugs": {
+    "url": "https://github.com/irony/aspipes/issues"
+  },
+  "homepage": "https://github.com/irony/aspipes#readme",
   "engines": {
     "node": ">=18.0.0"
   }
