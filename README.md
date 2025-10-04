@@ -30,19 +30,19 @@ await greeting.run() // → "HELLO!!!"
 The pipeline operator proposal (tc39/proposal-pipeline-operator) has been under discussion for several years, exploring multiple variants (F#, Smart, Hack, etc.).
 The asPipes experiment aims to:
 
-	•	prototype F#-style semantics directly in today’s JavaScript;
-	•	study ergonomics and readability in real-world code;
-	•	show that deferred, referentially transparent composition can be achieved without syntax extensions; and
-	•	inform the design conversation with practical, user-level feedback.
+- prototype F#-style semantics directly in today’s JavaScript;
+- study ergonomics and readability in real-world code;
+- show that deferred, referentially transparent composition can be achieved without syntax extensions; and
+- inform the design conversation with practical, user-level feedback.
 
 ⸻
 
 ## 3  Design Goals
-	•	✅ Composable — each transformation behaves like a unary function of the previous result.
-	•	✅ Deferred — no execution until .run() is called.
-	•	✅ Async-safe — promises and async functions are first-class citizens.
-	•	✅ Stateless — no global mutation; every pipeline owns its own context.
-	•	✅ Ergonomic — visually aligns with the future |> operator.
+- ✅ Composable — each transformation behaves like a unary function of the previous result.
+- ✅ Deferred — no execution until .run() is called.
+- ✅ Async-safe — promises and async functions are first-class citizens.
+- ✅ Stateless — no global mutation; every pipeline owns its own context.
+- ✅ Ergonomic — visually aligns with the future |> operator.
 
 ⸻
 
@@ -95,12 +95,46 @@ export function createAsPipes() {
   const asPipe = (fn) => new Proxy(function(){}, {
     get(_, prop) {
       if (prop === Symbol.toPrimitive)
-        return () => (stack.at(-1).steps.push(v => Promise.resolve(fn(v))), 0)
+        return () => (stack.at(-1).steps.push(async (v) => {
+          const stackLengthBefore = stack.length
+          const result = await Promise.resolve(fn(v))
+          
+          // If a new pipeline was created during fn execution and result is 0
+          if (result === 0 && stack.length > stackLengthBefore) {
+            // Get the pipeline that was created and execute it
+            const pipelineCtx = stack[stack.length - 1]
+            stack.pop() // Remove from stack as we're executing it
+            return await pipelineCtx.steps.reduce((p, f) => p.then(f), Promise.resolve(pipelineCtx.v))
+          }
+          
+          // If the function returns a pipeline token, execute it automatically
+          if (result && typeof result.run === 'function') {
+            return await result.run()
+          }
+          return result
+        }), 0)
     },
     apply(_, __, args) {
       const t = function(){}
       t[Symbol.toPrimitive] =
-        () => (stack.at(-1).steps.push(v => Promise.resolve(fn(v, ...args))), 0)
+        () => (stack.at(-1).steps.push(async (v) => {
+          const stackLengthBefore = stack.length
+          const result = await Promise.resolve(fn(v, ...args))
+          
+          // If a new pipeline was created during fn execution and result is 0
+          if (result === 0 && stack.length > stackLengthBefore) {
+            // Get the pipeline that was created and execute it
+            const pipelineCtx = stack[stack.length - 1]
+            stack.pop() // Remove from stack as we're executing it
+            return await pipelineCtx.steps.reduce((p, f) => p.then(f), Promise.resolve(pipelineCtx.v))
+          }
+          
+          // If the function returns a pipeline token, execute it automatically
+          if (result && typeof result.run === 'function') {
+            return await result.run()
+          }
+          return result
+        }), 0)
       return t
     }
   })
@@ -185,7 +219,59 @@ const haiku = pipe(ENDPOINT)
 console.log(await haiku.run())
 ```
 
-**D. Stream processing with async generators (Functional Reactive Programming)**
+**D. Composable pipes (Higher-Order Pipes)**
+
+Pipes can be composed into reusable, named higher-order pipes by wrapping them with `asPipe`. The implementation automatically detects and executes pipeline expressions, enabling clean, direct syntax:
+
+```javascript
+const { pipe, asPipe } = createAsPipes()
+
+// Assume postJson, toJson, pick, trim are defined (see example C)
+
+// Create reusable bot operations
+const askBot = asPipe((question) => pipe('https://api.berget.ai/v1/chat/completions')
+  | postJson({ 
+      model: 'gpt-oss', 
+      messages: [{ role: 'user', content: question }] 
+    })
+  | toJson
+  | pick('choices', 0, 'message', 'content')
+  | trim
+)
+
+const summarize = asPipe((text) => pipe('https://api.berget.ai/v1/chat/completions')
+  | postJson({ 
+      model: 'gpt-oss', 
+      messages: [
+        { role: 'system', content: 'Summarize in one sentence.' },
+        { role: 'user', content: text }
+      ] 
+    })
+  | toJson
+  | pick('choices', 0, 'message', 'content')
+  | trim
+)
+
+// Compose an agent that chains multiple bot operations
+const researchAgent = asPipe((topic) => pipe(`Research topic: ${topic}`)
+  | askBot
+  | summarize
+)
+
+// Use the composed agent in a pipeline
+let result;
+(result = pipe('quantum computing')) | researchAgent
+
+console.log(await result.run())
+// First asks bot about quantum computing, then summarizes the response
+```
+
+This pattern demonstrates:
+- **Composability**: Small pipes (`askBot`, `summarize`) combine into larger ones (`researchAgent`)
+- **Abstraction**: Complex multi-step operations hidden behind simple interfaces
+- **Reusability**: Each composed pipe can be used independently or as part of larger workflows
+
+**E. Stream processing with async generators (Functional Reactive Programming)**
 
 The asPipes library includes stream support for working with async generators, enabling functional reactive programming patterns:
 
@@ -216,7 +302,7 @@ for await (const id of stream) {
 }
 ```
 
-**E. Mouse event stream processing**
+**F. Mouse event stream processing**
 
 ```javascript
 // Simulate mouse drag tracking
@@ -288,18 +374,18 @@ It makes side effects explicit, keeps the evaluation lazy, and aligns with funct
 
 Limitations:
 
-	•	Doesn’t support arbitrary expressions on the right-hand side (only pipeable tokens).
-	•	Overuse may confuse tooling or linters.
-	•	Purely demonstrative — not intended for production.
+- Doesn’t support arbitrary expressions on the right-hand side (only pipeable tokens).
+- Overuse may confuse tooling or linters.
+- Purely demonstrative — not intended for production.
 
 ⸻
 
 ## 9  Open Questions
 
-	1.	Could a future ECMAScript grammar support a similar deferred evaluation model natively?
-	2.	What would static analyzers and TypeScript need to infer such pipeline types?
-	3.	Can the |> proposal benefit from runtime experiments like this to clarify ergonomics?
-	4.	Should .run() be implicit (auto-executed) or always explicit?
+1. Could a future ECMAScript grammar support a similar deferred evaluation model natively?
+2. What would static analyzers and TypeScript need to infer such pipeline types?
+3. Can the |> proposal benefit from runtime experiments like this to clarify ergonomics?
+4. Should .run() be implicit (auto-executed) or always explicit?
 
 ⸻
 
@@ -309,9 +395,9 @@ asPipes is not a syntax proposal but a runtime prototype — a living example of
 
 It demonstrates that:
 
-	•	The semantics of pipelines are composable and ergonomic in practice.
-	•	Async behavior integrates naturally.
-	•	The readability and cognitive flow of |> syntax can be validated today.
+- The semantics of pipelines are composable and ergonomic in practice.
+- Async behavior integrates naturally.
+- The readability and cognitive flow of |> syntax can be validated today.
 
 ⸻
 
