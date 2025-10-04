@@ -188,7 +188,7 @@ Evaluation order is strict left-to-right, with promise resolution between steps.
 
 ⸻
 
-8  Motivation and Design Notes
+## 8  Motivation and Design Notes
 
 Why use Symbol.toPrimitive?
 Because bitwise operators force primitive coercion and can be intercepted per-object, giving a hook for sequencing without syntax modification.
@@ -206,6 +206,7 @@ Limitations:
 
 ⸻
 
+## 9  Open Questions
 9  Open Questions
 	1.	Could a future ECMAScript grammar support a similar deferred evaluation model natively?
 	2.	What would static analyzers and TypeScript need to infer such pipeline types?
@@ -214,7 +215,7 @@ Limitations:
 
 ⸻
 
-10  Conclusion
+## 10  Conclusion
 
 asPipes is not a syntax proposal but a runtime prototype — a living example of how far JavaScript can stretch to approximate future language constructs using only what’s already standardized.
 
@@ -225,9 +226,7 @@ It demonstrates that:
 
 ⸻
 
-11  License
+## 11  License
 
 MIT © 2025
 This document is non-normative and intended for exploration and discussion within the JavaScript community.
-
-Would you like me to make it look like an actual TC39 Stage 0 draft (with “Status”, “Authors”, “Champions”, “References”, etc.) — i.e., in the canonical proposal format used in the tc39/proposals repo?
