@@ -10,7 +10,9 @@ The implementation is small (<50 lines) and supports both synchronous and asynch
 
 ```javascript
 const greeting = pipe('hello');
-greeting | upper | ex('!!!');
+greeting 
+  | upper 
+  | ex('!!!');
 await greeting.run() // → "HELLO!!!"
 ```
 
@@ -160,7 +162,9 @@ const upper = asPipe(s => s.toUpperCase())
 const ex    = asPipe((s, mark='!') => s + mark)
 
 const greeting = pipe('hello');
-greeting | upper | ex('!!!');
+greeting 
+  | upper 
+  | ex('!!!');
 console.log(await greeting.run()) // "HELLO!!!"
 ```
 
@@ -171,7 +175,9 @@ const inc = asPipe(x => x + 1)
 const mul = asPipe((x, k) => x * k)
 
 const calc = pipe(3);
-calc | inc | mul(10);
+calc 
+  | inc 
+  | mul(10);
 console.log(await calc.run()) // 40
 ```
 
@@ -199,7 +205,11 @@ const BODY = {
 };
 
 const haiku = pipe(ENDPOINT);
-haiku | postJson(BODY) | toJson | pick('choices', 0, 'message', 'content') | trim;
+haiku 
+  | postJson(BODY) 
+  | toJson 
+  | pick('choices', 0, 'message', 'content') 
+  | trim;
 console.log(await haiku.run())
 ```
 
@@ -215,29 +225,39 @@ const { pipe, asPipe } = createAsPipes()
 // Create reusable bot operations
 const askBot = asPipe((question) => {
   const p = pipe('https://api.berget.ai/v1/chat/completions');
-  p | postJson({ 
-      model: 'gpt-oss', 
-      messages: [{ role: 'user', content: question }] 
-    }) | toJson | pick('choices', 0, 'message', 'content') | trim;
+  p 
+    | postJson({ 
+        model: 'gpt-oss', 
+        messages: [{ role: 'user', content: question }] 
+      }) 
+    | toJson 
+    | pick('choices', 0, 'message', 'content') 
+    | trim;
   return p;
 })
 
 const summarize = asPipe((text) => {
   const p = pipe('https://api.berget.ai/v1/chat/completions');
-  p | postJson({ 
-      model: 'gpt-oss', 
-      messages: [
-        { role: 'system', content: 'Summarize in one sentence.' },
-        { role: 'user', content: text }
-      ] 
-    }) | toJson | pick('choices', 0, 'message', 'content') | trim;
+  p 
+    | postJson({ 
+        model: 'gpt-oss', 
+        messages: [
+          { role: 'system', content: 'Summarize in one sentence.' },
+          { role: 'user', content: text }
+        ] 
+      }) 
+    | toJson 
+    | pick('choices', 0, 'message', 'content') 
+    | trim;
   return p;
 })
 
 // Compose an agent that chains multiple bot operations
 const researchAgent = asPipe((topic) => {
   const p = pipe(`Research topic: ${topic}`);
-  p | askBot | summarize;
+  p 
+    | askBot 
+    | summarize;
   return p;
 })
 
@@ -274,7 +294,10 @@ async function* eventGenerator() {
 
 // Take first 3 "special" events
 const result = pipe(eventGenerator());
-result | filter(e => e.type === 'special') | map(e => e.id) | take(3);
+result 
+  | filter(e => e.type === 'special') 
+  | map(e => e.id) 
+  | take(3);
 
 const stream = await result.run();
 for await (const id of stream) {
@@ -301,7 +324,9 @@ const trackDrag = e => {
 };
 
 const result = pipe(eventStream(events));
-result | filter(trackDrag) | map(e => ({ x: e.x, y: e.y }));
+result 
+  | filter(trackDrag) 
+  | map(e => ({ x: e.x, y: e.y }));
 
 const stream = await result.run();
 const positions = [];
