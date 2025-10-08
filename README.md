@@ -9,7 +9,11 @@ The implementation is small (<50 lines) and supports both synchronous and asynch
 
 ```javascript
 const greeting = pipe('hello');
-greeting | upper | ex('!!!');
+
+greeting 
+  | upper 
+  | ex('!!!');
+
 await greeting.run(); // → "HELLO!!!"
 ```
 
@@ -65,8 +69,8 @@ Creates an isolated pipeline environment and returns:
 
 ```javascript
 {
-  (pipe, // begin a pipeline
-    asPipe); // lift a function into a pipeable form
+  pipe, // begin a pipeline
+  asPipe // lift a function into a pipeable form
 }
 ```
 
@@ -88,16 +92,230 @@ const ex = asPipe((s, mark = '!') => s + mark);
 Pipeable functions can also be called with arguments:
 
 ```javascript
-pipe('hello') | upper | ex('!!!');
+pipe('hello') 
+  | upper 
+  | ex('!!!');
 ```
 
 .run()
 
 Evaluates the accumulated transformations sequentially, returning a Promise of the final value.
 
-⸻
+## 5 Examples
 
-## 5 Reference Implementation
+**A. String pipeline**
+
+```javascript
+import { createAsPipes } from 'aspipes';
+
+const { pipe, asPipe } = createAsPipes();
+
+const upper = asPipe((s) => s.toUpperCase());
+const ex = asPipe((s, mark = '!') => s + mark);
+
+const greeting = pipe('hello');
+greeting 
+  | upper 
+  | ex('!!!');
+  
+console.log(await greeting.run()); // "HELLO!!!"
+```
+
+**B. Numeric pipeline**
+
+```javascript
+import { createAsPipes } from 'aspipes';
+
+const { pipe, asPipe } = createAsPipes();
+
+const inc = asPipe((x) => x + 1);
+const mul = asPipe((x, k) => x * k);
+
+const calc = pipe(3);
+calc 
+  | inc 
+  | mul(10);
+
+console.log(await calc.run()); // 40
+```
+
+**C. Async composition (LLM API call)**
+
+```javascript
+import { createAsPipes } from 'aspipes';
+
+const { pipe, asPipe } = createAsPipes();
+
+const postJson = asPipe((url, body, headers = {}) =>
+  fetch(url, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', ...headers },
+    body: JSON.stringify(body),
+  }),
+);
+const toJson = asPipe((r) => r.json());
+const pick = asPipe((o, ...keys) => keys.reduce((a, k) => a?.[k], o));
+const trim = asPipe((s) => (typeof s === 'string' ? s.trim() : s));
+
+const ENDPOINT = 'https://api.berget.ai/v1/chat/completions';
+const BODY = {
+  model: 'gpt-oss',
+  messages: [
+    { role: 'system', content: 'Reply briefly.' },
+    { role: 'user', content: 'Write a haiku about mountains.' },
+  ],
+};
+
+const haiku = pipe(ENDPOINT);
+haiku 
+| postJson(BODY) 
+| toJson 
+| pick('choices', 0, 'message', 'content') 
+| trim;
+console.log(await haiku.run());
+```
+
+**D. Composable pipes (Higher-Order Pipes)**
+
+Pipes can be composed into reusable, named higher-order pipes by wrapping them with `asPipe`. The implementation automatically detects and executes pipeline expressions, enabling clean, direct syntax:
+
+```javascript
+import { createAsPipes } from 'aspipes';
+
+const { pipe, asPipe } = createAsPipes();
+
+// Assume postJson, toJson, pick, trim are defined (see example C)
+
+// Create reusable bot operations
+const askBot = asPipe((question) => {
+  const p = pipe('https://api.berget.ai/v1/chat/completions');
+  p 
+  | postJson({
+      model: 'gpt-oss',
+      messages: [{ role: 'user', content: question }],
+    }) 
+  | toJson 
+  | pick('choices', 0, 'message', 'content') 
+  | trim;
+  return p;
+});
+
+const summarize = asPipe((text) => {
+  const p = pipe('https://api.berget.ai/v1/chat/completions');
+  p 
+  | postJson({
+      model: 'gpt-oss',
+      messages: [
+        { role: 'system', content: 'Summarize in one sentence.' },
+        { role: 'user', content: text },
+      ],
+    }) 
+  | toJson 
+  | pick('choices', 0, 'message', 'content') 
+  | trim;
+  return p;
+});
+
+// Compose an agent that chains multiple bot operations
+const researchAgent = asPipe((topic) => {
+  const p = pipe(`Research topic: ${topic}`);
+  p 
+    | askBot 
+    | summarize;
+  return p;
+});
+
+// Use the composed agent in a pipeline
+const result = pipe('quantum computing');
+result 
+  | researchAgent;
+
+console.log(await result.run());
+// First asks bot about quantum computing, then summarizes the response
+```
+
+This pattern demonstrates:
+
+- **Composability**: Small pipes (`askBot`, `summarize`) combine into larger ones (`researchAgent`)
+- **Abstraction**: Complex multi-step operations hidden behind simple interfaces
+- **Reusability**: Each composed pipe can be used independently or as part of larger workflows
+
+**E. Stream processing with async generators (Functional Reactive Programming)**
+
+The asPipes library includes stream support for working with async generators, enabling functional reactive programming patterns:
+
+```javascript
+import { createAsPipes } from 'aspipes';
+import { createStreamPipes, eventStream } from 'aspipes/stream.js';
+
+const { pipe, asPipe } = createAsPipes();
+const { map, filter, take, scan } = createStreamPipes(asPipe);
+
+// Process an endless stream of events
+async function* eventGenerator() {
+  let id = 0;
+  while (true) {
+    yield { id: id++, type: id % 3 === 0 ? 'special' : 'normal' };
+  }
+}
+
+// Take first 3 "special" events
+const result = pipe(eventGenerator());
+result 
+  | filter((e) => e.type === 'special') 
+  | map((e) => e.id) 
+  | take(3);
+
+const stream = await result.run();
+for await (const id of stream) {
+  console.log(id); // 0, 3, 6
+}
+```
+
+**F. Mouse event stream processing**
+
+```javascript
+// Simulate mouse drag tracking
+const events = [
+  { type: 'mousedown', x: 10, y: 10 },
+  { type: 'mousemove', x: 15, y: 15 },
+  { type: 'mousemove', x: 20, y: 20 },
+  { type: 'mouseup', x: 20, y: 20 },
+];
+
+let isDragging = false;
+const trackDrag = (e) => {
+  if (e.type === 'mousedown') isDragging = true;
+  if (e.type === 'mouseup') isDragging = false;
+  return isDragging && e.type === 'mousemove';
+};
+
+const result = pipe(eventStream(events));
+result 
+  | filter(trackDrag) 
+  | map((e) => ({ x: e.x, y: e.y }));
+
+const stream = await result.run();
+const positions = [];
+for await (const pos of stream) {
+  positions.push(pos); // [{ x: 15, y: 15 }, { x: 20, y: 20 }]
+}
+```
+
+**Stream Functions**
+
+The `stream.js` module provides these generator-based aspipe functions:
+
+- **map(iterable, fn)** - Transform each item in the stream
+- **filter(iterable, predicate)** - Filter items based on a condition
+- **take(iterable, n)** - Take the first n items from a stream
+- **scan(iterable, reducer, initial)** - Accumulate values, yielding intermediate results
+- **reduce(iterable, reducer, initial)** - Reduce stream to a single value
+
+These functions work seamlessly with async generators, enabling reactive patterns like waiting for specific events in an endless stream.
+
+
+## 6 Reference Implementation
 
 ```javascript
 export function createAsPipes() {
@@ -176,208 +394,6 @@ export function createAsPipes() {
   return { pipe, asPipe };
 }
 ```
-
-⸻
-
-## 6 Examples
-
-**A. String pipeline**
-
-```javascript
-import { createAsPipes } from 'aspipes';
-
-const { pipe, asPipe } = createAsPipes();
-
-const upper = asPipe((s) => s.toUpperCase());
-const ex = asPipe((s, mark = '!') => s + mark);
-
-const greeting = pipe('hello');
-greeting | upper | ex('!!!');
-console.log(await greeting.run()); // "HELLO!!!"
-```
-
-**B. Numeric pipeline**
-
-```javascript
-import { createAsPipes } from 'aspipes';
-
-const { pipe, asPipe } = createAsPipes();
-
-const inc = asPipe((x) => x + 1);
-const mul = asPipe((x, k) => x * k);
-
-const calc = pipe(3);
-calc | inc | mul(10);
-console.log(await calc.run()); // 40
-```
-
-**C. Async composition (LLM API call)**
-
-```javascript
-import { createAsPipes } from 'aspipes';
-
-const { pipe, asPipe } = createAsPipes();
-
-const postJson = asPipe((url, body, headers = {}) =>
-  fetch(url, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', ...headers },
-    body: JSON.stringify(body),
-  }),
-);
-const toJson = asPipe((r) => r.json());
-const pick = asPipe((o, ...keys) => keys.reduce((a, k) => a?.[k], o));
-const trim = asPipe((s) => (typeof s === 'string' ? s.trim() : s));
-
-const ENDPOINT = 'https://api.berget.ai/v1/chat/completions';
-const BODY = {
-  model: 'gpt-oss',
-  messages: [
-    { role: 'system', content: 'Reply briefly.' },
-    { role: 'user', content: 'Write a haiku about mountains.' },
-  ],
-};
-
-const haiku = pipe(ENDPOINT);
-haiku |
-  postJson(BODY) |
-  toJson |
-  pick('choices', 0, 'message', 'content') |
-  trim;
-console.log(await haiku.run());
-```
-
-**D. Composable pipes (Higher-Order Pipes)**
-
-Pipes can be composed into reusable, named higher-order pipes by wrapping them with `asPipe`. The implementation automatically detects and executes pipeline expressions, enabling clean, direct syntax:
-
-```javascript
-import { createAsPipes } from 'aspipes';
-
-const { pipe, asPipe } = createAsPipes();
-
-// Assume postJson, toJson, pick, trim are defined (see example C)
-
-// Create reusable bot operations
-const askBot = asPipe((question) => {
-  const p = pipe('https://api.berget.ai/v1/chat/completions');
-  p |
-    postJson({
-      model: 'gpt-oss',
-      messages: [{ role: 'user', content: question }],
-    }) |
-    toJson |
-    pick('choices', 0, 'message', 'content') |
-    trim;
-  return p;
-});
-
-const summarize = asPipe((text) => {
-  const p = pipe('https://api.berget.ai/v1/chat/completions');
-  p |
-    postJson({
-      model: 'gpt-oss',
-      messages: [
-        { role: 'system', content: 'Summarize in one sentence.' },
-        { role: 'user', content: text },
-      ],
-    }) |
-    toJson |
-    pick('choices', 0, 'message', 'content') |
-    trim;
-  return p;
-});
-
-// Compose an agent that chains multiple bot operations
-const researchAgent = asPipe((topic) => {
-  const p = pipe(`Research topic: ${topic}`);
-  p | askBot | summarize;
-  return p;
-});
-
-// Use the composed agent in a pipeline
-const result = pipe('quantum computing');
-result | researchAgent;
-console.log(await result.run());
-// First asks bot about quantum computing, then summarizes the response
-```
-
-This pattern demonstrates:
-
-- **Composability**: Small pipes (`askBot`, `summarize`) combine into larger ones (`researchAgent`)
-- **Abstraction**: Complex multi-step operations hidden behind simple interfaces
-- **Reusability**: Each composed pipe can be used independently or as part of larger workflows
-
-**E. Stream processing with async generators (Functional Reactive Programming)**
-
-The asPipes library includes stream support for working with async generators, enabling functional reactive programming patterns:
-
-```javascript
-import { createAsPipes } from 'aspipes';
-import { createStreamPipes, eventStream } from 'aspipes/stream.js';
-
-const { pipe, asPipe } = createAsPipes();
-const { map, filter, take, scan } = createStreamPipes(asPipe);
-
-// Process an endless stream of events
-async function* eventGenerator() {
-  let id = 0;
-  while (true) {
-    yield { id: id++, type: id % 3 === 0 ? 'special' : 'normal' };
-  }
-}
-
-// Take first 3 "special" events
-const result = pipe(eventGenerator());
-result | filter((e) => e.type === 'special') | map((e) => e.id) | take(3);
-
-const stream = await result.run();
-for await (const id of stream) {
-  console.log(id); // 0, 3, 6
-}
-```
-
-**F. Mouse event stream processing**
-
-```javascript
-// Simulate mouse drag tracking
-const events = [
-  { type: 'mousedown', x: 10, y: 10 },
-  { type: 'mousemove', x: 15, y: 15 },
-  { type: 'mousemove', x: 20, y: 20 },
-  { type: 'mouseup', x: 20, y: 20 },
-];
-
-let isDragging = false;
-const trackDrag = (e) => {
-  if (e.type === 'mousedown') isDragging = true;
-  if (e.type === 'mouseup') isDragging = false;
-  return isDragging && e.type === 'mousemove';
-};
-
-const result = pipe(eventStream(events));
-result | filter(trackDrag) | map((e) => ({ x: e.x, y: e.y }));
-
-const stream = await result.run();
-const positions = [];
-for await (const pos of stream) {
-  positions.push(pos); // [{ x: 15, y: 15 }, { x: 20, y: 20 }]
-}
-```
-
-**Stream Functions**
-
-The `stream.js` module provides these generator-based aspipe functions:
-
-- **map(iterable, fn)** - Transform each item in the stream
-- **filter(iterable, predicate)** - Filter items based on a condition
-- **take(iterable, n)** - Take the first n items from a stream
-- **scan(iterable, reducer, initial)** - Accumulate values, yielding intermediate results
-- **reduce(iterable, reducer, initial)** - Reduce stream to a single value
-
-These functions work seamlessly with async generators, enabling reactive patterns like waiting for specific events in an endless stream.
-
-⸻
 
 ## 7 Semantics
 
