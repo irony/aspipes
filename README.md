@@ -16,6 +16,16 @@ greeting
 await greeting.run() // → "HELLO!!!"
 ```
 
+## Installation
+
+```bash
+npm install aspipes
+```
+
+```javascript
+import { createAsPipes } from 'aspipes';
+```
+
 
 ⸻
 
@@ -42,7 +52,17 @@ The asPipes experiment aims to:
 
 ## 4  Core API
 
-createAsPipes()
+### Installation and Import
+
+```bash
+npm install aspipes
+```
+
+```javascript
+import { createAsPipes } from 'aspipes';
+```
+
+### createAsPipes()
 
 Creates an isolated pipeline environment and returns:
 
@@ -156,6 +176,8 @@ export function createAsPipes() {
 **A. String pipeline**
 
 ```javascript
+import { createAsPipes } from 'aspipes';
+
 const { pipe, asPipe } = createAsPipes()
 
 const upper = asPipe(s => s.toUpperCase())
@@ -171,6 +193,10 @@ console.log(await greeting.run()) // "HELLO!!!"
 **B. Numeric pipeline**
 
 ```javascript
+import { createAsPipes } from 'aspipes';
+
+const { pipe, asPipe } = createAsPipes()
+
 const inc = asPipe(x => x + 1)
 const mul = asPipe((x, k) => x * k)
 
@@ -184,6 +210,10 @@ console.log(await calc.run()) // 40
 **C. Async composition (LLM API call)**
 
 ```javascript
+import { createAsPipes } from 'aspipes';
+
+const { pipe, asPipe } = createAsPipes()
+
 const postJson = asPipe((url, body, headers={}) =>
   fetch(url, {
     method: 'POST',
@@ -218,6 +248,8 @@ console.log(await haiku.run())
 Pipes can be composed into reusable, named higher-order pipes by wrapping them with `asPipe`. The implementation automatically detects and executes pipeline expressions, enabling clean, direct syntax:
 
 ```javascript
+import { createAsPipes } from 'aspipes';
+
 const { pipe, asPipe } = createAsPipes()
 
 // Assume postJson, toJson, pick, trim are defined (see example C)
@@ -278,8 +310,8 @@ This pattern demonstrates:
 The asPipes library includes stream support for working with async generators, enabling functional reactive programming patterns:
 
 ```javascript
-import { createAsPipes } from './index.js';
-import { createStreamPipes, eventStream } from './stream.js';
+import { createAsPipes } from 'aspipes';
+import { createStreamPipes, eventStream } from 'aspipes/stream.js';
 
 const { pipe, asPipe } = createAsPipes();
 const { map, filter, take, scan } = createStreamPipes(asPipe);
