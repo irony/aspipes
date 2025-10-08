@@ -345,101 +345,30 @@ The `stream.js` module provides these generator-based aspipe functions:
 These functions work seamlessly with async generators, enabling reactive patterns like waiting for specific events in an endless stream.
 
 
-## 6 Reference Implementation
+## 6 How the Magic Works
 
-The core implementation is compact and elegant:
+The core insight is using JavaScript's coercion system to intercept the `|` operator:
 
 ```javascript
-export function createAsPipes() {
-  const stack = [];
+// The magic happens in Symbol.toPrimitive
+const token = {
+  [Symbol.toPrimitive]: () => {
+    // Register this step in the pipeline
+    stack.at(-1).steps.push(async (v) => fn(v, ...args));
+    return 0; // Return 0 so | operations continue
+  }
+};
 
-  const asPipe = (fnOrObj) => {
-    // If it's an object, return a proxy that makes all methods pipeable
-    if (typeof fnOrObj === 'object' && fnOrObj !== null && typeof fnOrObj !== 'function') {
-      return new Proxy({}, {
-        get(_, prop) {
-          if (typeof fnOrObj[prop] === 'function') {
-            // Don't bind prototype methods - they need the actual value as 'this'
-            if (fnOrObj.constructor === Object.prototype.constructor || 
-                fnOrObj === Array.prototype ||
-                fnOrObj.constructor === Function.prototype.constructor) {
-              return asPipe(fnOrObj[prop]);
-            }
-            return asPipe(fnOrObj[prop].bind(fnOrObj));
-          }
-          return fnOrObj[prop];
-        }
-      });
-    }
-
-    // Original function behavior
-    const fn = fnOrObj;
-    return new Proxy(function () {}, {
-      get(_, prop) {
-        if (prop === Symbol.toPrimitive)
-          return () => (
-            stack.at(-1).steps.push(async (v) => {
-              const before = stack.length;
-              const result = await Promise.resolve(fn(v));
-              if (result === 0 && stack.length > before) {
-                const ctx = stack.pop();
-                return await ctx.steps.reduce(
-                  (p, f) => p.then(f),
-                  Promise.resolve(ctx.v),
-                );
-              }
-              if (result && typeof result.run === 'function')
-                return await result.run();
-              return result;
-            }),
-            0
-          );
-      },
-      apply(_, __, args) {
-        const t = function () {};
-        t[Symbol.toPrimitive] = () => (
-          stack.at(-1).steps.push(async (v) => {
-            const before = stack.length;
-            const result = await Promise.resolve(fn(v, ...args));
-            if (result === 0 && stack.length > before) {
-              const ctx = stack.pop();
-              return await ctx.steps.reduce(
-                (p, f) => p.then(f),
-                Promise.resolve(ctx.v),
-              );
-            }
-            if (result && typeof result.run === 'function')
-              return await result.run();
-            return result;
-          }),
-          0
-        );
-        return t;
-      },
-    });
-  };
-
-  const pipe = (x) => {
-    const ctx = { v: x, steps: [], token: null };
-    const token = {
-      [Symbol.toPrimitive]: () => (stack.push(ctx), 0),
-      async run() {
-        return ctx.steps.reduce((p, f) => p.then(f), Promise.resolve(ctx.v));
-      },
-    };
-    ctx.token = token;
-    return token;
-  };
-
-  // fångar den pipeline som just byggdes av ett |-uttryck
-  const take = (_ignored) => {
-    const ctx = stack.pop();
-    return ctx?.token ?? _ignored; // om inget på stacken, returnera originalet
-  };
-
-  return { pipe, asPipe, take };
-}
+// When you write: pipe(x) | fn | fn2
+// JavaScript calls Symbol.toPrimitive on each operand
+// This lets us capture the pipeline steps before execution
 ```
+
+Key techniques:
+- **Symbol.toPrimitive** intercepts `|` operator coercion
+- **Proxy objects** make functions pipeable while preserving call syntax  
+- **Deferred execution** via `.run()` keeps pipelines pure until needed
+- **Stack-based context** enables composable higher-order pipes
 
 ## 7 Semantics
 
