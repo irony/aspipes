@@ -1,8 +1,28 @@
 export function createAsPipes() {
   const stack = [];
 
-  const asPipe = (fn) =>
-    new Proxy(function () {}, {
+  const asPipe = (fnOrObj) => {
+    // If it's an object, return a proxy that makes all methods pipeable
+    if (typeof fnOrObj === 'object' && fnOrObj !== null && typeof fnOrObj !== 'function') {
+      return new Proxy({}, {
+        get(_, prop) {
+          if (typeof fnOrObj[prop] === 'function') {
+            // Don't bind prototype methods - they need the actual value as 'this'
+            if (fnOrObj.constructor === Object || 
+                fnOrObj === Array.prototype ||
+                fnOrObj.constructor === Function) {
+              return asPipe(fnOrObj[prop]);
+            }
+            return asPipe(fnOrObj[prop].bind(fnOrObj));
+          }
+          return fnOrObj[prop];
+        }
+      });
+    }
+
+    // Original function behavior
+    const fn = fnOrObj;
+    return new Proxy(function () {}, {
       get(_, prop) {
         if (prop === Symbol.toPrimitive)
           return () => (
@@ -45,6 +65,7 @@ export function createAsPipes() {
         return t;
       },
     });
+  };
 
   const pipe = (x) => {
     const ctx = { v: x, steps: [], token: null };

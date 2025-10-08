@@ -1,14 +1,14 @@
-// Stream/Generator aspipe functions for functional reactive programming
+// Stream/Generator asPipe functions for functional reactive programming
 
 export function createStreamPipes(asPipe) {
-  // Map function for async generators
+  // Transform each item in async generators
   const map = asPipe(async function* (iterable, fn) {
     for await (const item of iterable) {
       yield await Promise.resolve(fn(item));
     }
   });
 
-  // Filter function for async generators
+  // Filter items based on predicate
   const filter = asPipe(async function* (iterable, predicate) {
     for await (const item of iterable) {
       if (await Promise.resolve(predicate(item))) {
@@ -17,7 +17,7 @@ export function createStreamPipes(asPipe) {
     }
   });
 
-  // Take function - takes first n items from stream
+  // Take first n items from stream
   const take = asPipe(async function* (iterable, n) {
     let count = 0;
     for await (const item of iterable) {
@@ -27,7 +27,7 @@ export function createStreamPipes(asPipe) {
     }
   });
 
-  // Scan function - like reduce but yields intermediate results
+  // Like reduce but yields intermediate results
   const scan = asPipe(async function* (iterable, reducer, initialValue) {
     let accumulator = initialValue;
     let isFirst = true;
@@ -43,7 +43,7 @@ export function createStreamPipes(asPipe) {
     }
   });
 
-  // Reduce function - reduces stream to single value
+  // Reduce stream to single value
   const reduce = asPipe(async (iterable, reducer, initialValue) => {
     let accumulator = initialValue;
     let isFirst = true;
