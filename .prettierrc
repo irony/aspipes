@@ -2,5 +2,14 @@
   "tabWidth": 2,
   "useTabs": false,
   "semi": true,
-  "singleQuote": true
+  "singleQuote": true,
+  "overrides": [
+    {
+      "files": "*.md",
+      "options": {
+        "proseWrap": "preserve",
+        "printWidth": 120
+      }
+    }
+  ]
 }
