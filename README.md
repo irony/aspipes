@@ -9,10 +9,8 @@ It demonstrates that pipeline-style composition can be expressed using the exist
 The implementation is small (<50 lines) and supports both synchronous and asynchronous evaluation with a familiar syntax:
 
 ```javascript
-const greeting = pipe('hello')
-  | upper
-  | ex('!!!')
-
+const greeting = pipe('hello');
+greeting | upper | ex('!!!');
 await greeting.run() // → "HELLO!!!"
 ```
 
@@ -161,10 +159,8 @@ const { pipe, asPipe } = createAsPipes()
 const upper = asPipe(s => s.toUpperCase())
 const ex    = asPipe((s, mark='!') => s + mark)
 
-const greeting = pipe('hello')
-  | upper
-  | ex('!!!')
-
+const greeting = pipe('hello');
+greeting | upper | ex('!!!');
 console.log(await greeting.run()) // "HELLO!!!"
 ```
 
@@ -174,10 +170,8 @@ console.log(await greeting.run()) // "HELLO!!!"
 const inc = asPipe(x => x + 1)
 const mul = asPipe((x, k) => x * k)
 
-const calc = pipe(3)
-  | inc
-  | mul(10)
-
+const calc = pipe(3);
+calc | inc | mul(10);
 console.log(await calc.run()) // 40
 ```
 
@@ -204,12 +198,8 @@ const BODY = {
   ]
 };
 
-const haiku = pipe(ENDPOINT)
-  | postJson(BODY)
-  | toJson
-  | pick('choices', 0, 'message', 'content')
-  | trim;
-
+const haiku = pipe(ENDPOINT);
+haiku | postJson(BODY) | toJson | pick('choices', 0, 'message', 'content') | trim;
 console.log(await haiku.run())
 ```
 
@@ -223,39 +213,37 @@ const { pipe, asPipe } = createAsPipes()
 // Assume postJson, toJson, pick, trim are defined (see example C)
 
 // Create reusable bot operations
-const askBot = asPipe((question) => pipe('https://api.berget.ai/v1/chat/completions')
-  | postJson({ 
+const askBot = asPipe((question) => {
+  const p = pipe('https://api.berget.ai/v1/chat/completions');
+  p | postJson({ 
       model: 'gpt-oss', 
       messages: [{ role: 'user', content: question }] 
-    })
-  | toJson
-  | pick('choices', 0, 'message', 'content')
-  | trim
-)
+    }) | toJson | pick('choices', 0, 'message', 'content') | trim;
+  return p;
+})
 
-const summarize = asPipe((text) => pipe('https://api.berget.ai/v1/chat/completions')
-  | postJson({ 
+const summarize = asPipe((text) => {
+  const p = pipe('https://api.berget.ai/v1/chat/completions');
+  p | postJson({ 
       model: 'gpt-oss', 
       messages: [
         { role: 'system', content: 'Summarize in one sentence.' },
         { role: 'user', content: text }
       ] 
-    })
-  | toJson
-  | pick('choices', 0, 'message', 'content')
-  | trim
-)
+    }) | toJson | pick('choices', 0, 'message', 'content') | trim;
+  return p;
+})
 
 // Compose an agent that chains multiple bot operations
-const researchAgent = asPipe((topic) => pipe(`Research topic: ${topic}`)
-  | askBot
-  | summarize
-)
+const researchAgent = asPipe((topic) => {
+  const p = pipe(`Research topic: ${topic}`);
+  p | askBot | summarize;
+  return p;
+})
 
 // Use the composed agent in a pipeline
-let result;
-(result = pipe('quantum computing')) | researchAgent
-
+const result = pipe('quantum computing');
+result | researchAgent;
 console.log(await result.run())
 // First asks bot about quantum computing, then summarizes the response
 ```
@@ -285,10 +273,8 @@ async function* eventGenerator() {
 }
 
 // Take first 3 "special" events
-const result = pipe(eventGenerator())
-  | filter(e => e.type === 'special')
-  | map(e => e.id)
-  | take(3);
+const result = pipe(eventGenerator());
+result | filter(e => e.type === 'special') | map(e => e.id) | take(3);
 
 const stream = await result.run();
 for await (const id of stream) {
@@ -314,9 +300,8 @@ const trackDrag = e => {
   return isDragging && e.type === 'mousemove';
 };
 
-const result = pipe(eventStream(events))
-  | filter(trackDrag)
-  | map(e => ({ x: e.x, y: e.y }));
+const result = pipe(eventStream(events));
+result | filter(trackDrag) | map(e => ({ x: e.x, y: e.y }));
 
 const stream = await result.run();
 const positions = [];
