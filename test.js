@@ -3,13 +3,13 @@ import { strict as assert } from 'node:assert';
 import { test } from 'node:test';
 
 test('basic example', async () => {
-  const { pipe, asPipe } = createAsPipes()
-  const upper = asPipe((s) => s.toUpperCase())
+  const { pipe, asPipe } = createAsPipes();
+  const upper = asPipe((s) => s.toUpperCase());
 
   const result = pipe('hello');
   result | upper;
-  assert.equal(await result.run(), 'HELLO')
-})
+  assert.equal(await result.run(), 'HELLO');
+});
 
 test('createAsPipes returns pipe and asPipe functions', () => {
   const { pipe, asPipe } = createAsPipes();
@@ -32,9 +32,7 @@ test('string pipeline with multiple operations', async () => {
   const ex = asPipe((s, mark = '!') => s + mark);
 
   const greeting = pipe('hello');
-  greeting 
-    | upper 
-    | ex('!!!');
+  greeting | upper | ex('!!!');
   assert.equal(await greeting.run(), 'HELLO!!!');
 });
 
@@ -63,9 +61,7 @@ test('numeric pipeline with multiplication', async () => {
   const mul = asPipe((x, k) => x * k);
 
   const calc = pipe(3);
-  calc 
-    | inc 
-    | mul(10);
+  calc | inc | mul(10);
   assert.equal(await calc.run(), 40);
 });
 
@@ -93,10 +89,7 @@ test('mixed sync and async pipeline', async () => {
   const add = asPipe((x, y) => x + y);
 
   const result = pipe(5);
-  result 
-    | inc 
-    | asyncDouble 
-    | add(3);
+  result | inc | asyncDouble | add(3);
   assert.equal(await result.run(), 15); // (5 + 1) * 2 + 3 = 15
 });
 
@@ -105,9 +98,7 @@ test('object pipeline', async () => {
   const addProperty = asPipe((obj, key, value) => ({ ...obj, [key]: value }));
 
   const result = pipe({});
-  result 
-    | addProperty('name', 'John') 
-    | addProperty('age', 30);
+  result | addProperty('name', 'John') | addProperty('age', 30);
   const final = await result.run();
 
   assert.equal(final.name, 'John');
@@ -120,9 +111,7 @@ test('array pipeline', async () => {
   const filter = asPipe((arr, fn) => arr.filter(fn));
 
   const result = pipe([1, 2, 3, 4, 5]);
-  result 
-    | map((x) => x * 2) 
-    | filter((x) => x > 5);
+  result | map((x) => x * 2) | filter((x) => x > 5);
 
   const final = await result.run();
   assert.deepEqual(final, [6, 8, 10]);
@@ -201,11 +190,7 @@ test('complex pipeline with multiple transformations', async () => {
   const join = asPipe((arr, delim) => arr.join(delim));
 
   const result = pipe('hello world test');
-  result 
-    | upper 
-    | split(' ') 
-    | filter((w) => w.length > 4) 
-    | join('-');
+  result | upper | split(' ') | filter((w) => w.length > 4) | join('-');
 
   assert.equal(await result.run(), 'HELLO-WORLD');
 });
@@ -290,10 +275,7 @@ test('composable pipes - higher-order pipe composition', async () => {
   // Create a composed pipe - clean syntax without variable assignment
   const complexCalc = asPipe((value) => {
     const p = pipe(value);
-    p 
-      | add(5) 
-      | multiply(2) 
-      | square;
+    p | add(5) | multiply(2) | square;
     return p;
   });
 
@@ -319,10 +301,7 @@ test('composable pipes - bot-like pattern with mock data', async () => {
   // Compose a reusable bot pipe - clean direct syntax
   const botPipe = asPipe((endpoint, payload) => {
     const p = pipe(endpoint);
-    p 
-      | postJson(payload) 
-      | extract('result') 
-      | trim;
+    p | postJson(payload) | extract('result') | trim;
     return p;
   });
 
@@ -342,17 +321,13 @@ test('composable pipes - pipe used directly as operator', async () => {
   // Create a composable pipe using direct pipeline expression
   const calculate = asPipe((value) => {
     const p = pipe(value);
-    p 
-      | add(10) 
-      | mul(2);
+    p | add(10) | mul(2);
     return p;
   });
 
   // Use in a larger pipeline
   const final = pipe(5);
-  final 
-    | calculate 
-    | add(100);
+  final | calculate | add(100);
 
   // (5 + 10) * 2 = 30, then 30 + 100 = 130
   assert.equal(await final.run(), 130);

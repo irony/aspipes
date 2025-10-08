@@ -27,10 +27,10 @@ async function* numbers() {
 }
 
 let result1;
-(result1 = pipe(numbers()))
-  | map(x => x * 2)
-  | filter(x => x > 10)
-  | take(3);
+(result1 = pipe(numbers())) |
+  map((x) => x * 2) |
+  filter((x) => x > 10) |
+  take(3);
 
 const stream1 = await result1.run();
 await display(stream1, 'Doubled numbers > 10, take 3');
@@ -42,19 +42,19 @@ async function* endlessEvents() {
   let id = 0;
   while (true) {
     const currentId = id++;
-    yield { 
-      id: currentId, 
+    yield {
+      id: currentId,
       type: currentId % 3 === 0 ? 'special' : 'normal',
-      timestamp: Date.now()
+      timestamp: Date.now(),
     };
   }
 }
 
 let result2;
-(result2 = pipe(endlessEvents()))
-  | filter(e => e.type === 'special')
-  | map(e => ({ id: e.id, type: e.type }))
-  | take(5);
+(result2 = pipe(endlessEvents())) |
+  filter((e) => e.type === 'special') |
+  map((e) => ({ id: e.id, type: e.type })) |
+  take(5);
 
 const stream2 = await result2.run();
 await display(stream2, 'First 5 special events from endless stream');
@@ -72,16 +72,16 @@ const mouseEvents = [
 ];
 
 let isDragging = false;
-const trackDrag = e => {
+const trackDrag = (e) => {
   if (e.type === 'mousedown') isDragging = true;
   if (e.type === 'mouseup') isDragging = false;
   return isDragging && e.type === 'mousemove';
 };
 
 let result3;
-(result3 = pipe(eventStream(mouseEvents)))
-  | filter(trackDrag)
-  | map(e => ({ x: e.x, y: e.y }));
+(result3 = pipe(eventStream(mouseEvents))) |
+  filter(trackDrag) |
+  map((e) => ({ x: e.x, y: e.y }));
 
 const stream3 = await result3.run();
 await display(stream3, 'Mouse drag positions');
@@ -100,12 +100,12 @@ const trackStats = (stats, event) => ({
   totalEvents: stats.totalEvents + 1,
   clicks: stats.clicks + (event.type === 'click' ? 1 : 0),
   sum: stats.sum + event.value,
-  lastEvent: event.type
+  lastEvent: event.type,
 });
 
 let result4;
-(result4 = pipe(eventStream(events)))
-  | scan(trackStats, { totalEvents: 0, clicks: 0, sum: 0, lastEvent: null });
+(result4 = pipe(eventStream(events))) |
+  scan(trackStats, { totalEvents: 0, clicks: 0, sum: 0, lastEvent: null });
 
 const stream4 = await result4.run();
 await display(stream4, 'Running statistics (scan)');
@@ -122,9 +122,9 @@ const systemEvents = [
 ];
 
 let result5;
-(result5 = pipe(eventStream(systemEvents)))
-  | filter(e => e.type === 'complete')
-  | take(1);
+(result5 = pipe(eventStream(systemEvents))) |
+  filter((e) => e.type === 'complete') |
+  take(1);
 
 const stream5 = await result5.run();
 await display(stream5, 'Waiting for complete event');

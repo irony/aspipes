@@ -14,7 +14,9 @@ console.log('=== Functional Reactive Programming with aspipes ===\n');
 // Example 1: Endless event stream - waiting for specific events
 // ============================================================================
 console.log('1. Waiting for specific events in an endless stream:');
-console.log('   Creating an infinite event stream and extracting special events...\n');
+console.log(
+  '   Creating an infinite event stream and extracting special events...\n',
+);
 
 async function* infiniteEventStream() {
   let id = 0;
@@ -23,16 +25,16 @@ async function* infiniteEventStream() {
     yield {
       id: currentId,
       type: currentId % 5 === 0 ? 'important' : 'normal',
-      data: `Event ${currentId}`
+      data: `Event ${currentId}`,
     };
   }
 }
 
 // Wait for the first 3 "important" events from an endless stream
 let result1;
-(result1 = pipe(infiniteEventStream()))
-  | filter(e => e.type === 'important')
-  | take(3);
+(result1 = pipe(infiniteEventStream())) |
+  filter((e) => e.type === 'important') |
+  take(3);
 
 const stream1 = await result1.run();
 console.log('   First 3 important events:');
@@ -61,21 +63,23 @@ const mouseDragEvents = [
 
 // Track drag state and filter for drag movements
 let isDragging = false;
-const isDragMove = e => {
+const isDragMove = (e) => {
   if (e.type === 'mousedown') isDragging = true;
   if (e.type === 'mouseup') isDragging = false;
   return isDragging && e.type === 'mousemove';
 };
 
 let dragResult;
-(dragResult = pipe(eventStream(mouseDragEvents)))
-  | filter(isDragMove)
-  | map(e => ({ position: { x: e.x, y: e.y }, time: e.time }));
+(dragResult = pipe(eventStream(mouseDragEvents))) |
+  filter(isDragMove) |
+  map((e) => ({ position: { x: e.x, y: e.y }, time: e.time }));
 
 const dragStream = await dragResult.run();
 console.log('   Drag movements detected:');
 for await (const move of dragStream) {
-  console.log(`   - Position (${move.position.x}, ${move.position.y}) at time ${move.time}ms`);
+  console.log(
+    `   - Position (${move.position.x}, ${move.position.y}) at time ${move.time}ms`,
+  );
 }
 
 // ============================================================================
@@ -86,10 +90,10 @@ console.log('   Tracking consecutive clicks within a time window...\n');
 
 const clickEvents = [
   { type: 'click', x: 10, y: 10, time: 100 },
-  { type: 'click', x: 10, y: 10, time: 150 },  // Double click (50ms apart)
+  { type: 'click', x: 10, y: 10, time: 150 }, // Double click (50ms apart)
   { type: 'move', x: 20, y: 20, time: 300 },
-  { type: 'click', x: 30, y: 30, time: 500 },  // Single click
-  { type: 'click', x: 30, y: 30, time: 800 },  // Not a double click (300ms apart)
+  { type: 'click', x: 30, y: 30, time: 500 }, // Single click
+  { type: 'click', x: 30, y: 30, time: 800 }, // Not a double click (300ms apart)
   { type: 'click', x: 40, y: 40, time: 1000 },
   { type: 'click', x: 40, y: 40, time: 1100 }, // Double click (100ms apart)
 ];
@@ -100,47 +104,63 @@ const trackDoubleClicks = (state, event) => {
   if (event.type !== 'click') {
     return { lastClick: null, isDouble: false };
   }
-  
-  const timeDiff = state.lastClick ? event.time - state.lastClick.time : Infinity;
+
+  const timeDiff = state.lastClick
+    ? event.time - state.lastClick.time
+    : Infinity;
   const isDouble = timeDiff < DOUBLE_CLICK_THRESHOLD;
-  
+
   return {
     lastClick: event,
     isDouble,
-    event: isDouble ? event : null
+    event: isDouble ? event : null,
   };
 };
 
 let clickResult;
-(clickResult = pipe(eventStream(clickEvents)))
-  | scan(trackDoubleClicks, { lastClick: null, isDouble: false })
-  | filter(state => state.isDouble && state.event)
-  | map(state => state.event);
+(clickResult = pipe(eventStream(clickEvents))) |
+  scan(trackDoubleClicks, { lastClick: null, isDouble: false }) |
+  filter((state) => state.isDouble && state.event) |
+  map((state) => state.event);
 
 const doubleClickStream = await clickResult.run();
 console.log('   Double clicks detected:');
 for await (const click of doubleClickStream) {
-  console.log(`   - Double click at (${click.x}, ${click.y}) at time ${click.time}ms`);
+  console.log(
+    `   - Double click at (${click.x}, ${click.y}) at time ${click.time}ms`,
+  );
 }
 
 // ============================================================================
 // Example 4: Complex reactive pattern - monitoring system events
 // ============================================================================
 console.log('\n4. Complex reactive pattern - system event monitoring:');
-console.log('   Processing a stream of system events with stateful tracking...\n');
+console.log(
+  '   Processing a stream of system events with stateful tracking...\n',
+);
 
 async function* systemEventStream() {
   const events = [
     { type: 'start', service: 'web-server', timestamp: 1000 },
     { type: 'request', service: 'web-server', count: 1, timestamp: 1100 },
     { type: 'request', service: 'web-server', count: 2, timestamp: 1200 },
-    { type: 'error', service: 'web-server', message: 'Connection timeout', timestamp: 1300 },
+    {
+      type: 'error',
+      service: 'web-server',
+      message: 'Connection timeout',
+      timestamp: 1300,
+    },
     { type: 'request', service: 'web-server', count: 3, timestamp: 1400 },
-    { type: 'error', service: 'web-server', message: 'Database error', timestamp: 1500 },
+    {
+      type: 'error',
+      service: 'web-server',
+      message: 'Database error',
+      timestamp: 1500,
+    },
     { type: 'stop', service: 'web-server', timestamp: 1600 },
     { type: 'start', service: 'api-server', timestamp: 1700 },
   ];
-  
+
   for (const event of events) {
     yield event;
   }
@@ -151,20 +171,20 @@ const aggregateStats = (stats, event) => ({
   requests: stats.requests + (event.type === 'request' ? 1 : 0),
   errors: stats.errors + (event.type === 'error' ? 1 : 0),
   services: stats.services.add(event.service),
-  lastEvent: event
+  lastEvent: event,
 });
 
 let sysResult;
-(sysResult = pipe(systemEventStream()))
-  | scan(aggregateStats, { 
-      totalEvents: 0, 
-      requests: 0, 
-      errors: 0, 
-      services: new Set(),
-      lastEvent: null 
-    })
-  | filter(stats => stats.errors > 0)  // Only show states with errors
-  | take(2);  // Take first 2 states with errors
+(sysResult = pipe(systemEventStream())) |
+  scan(aggregateStats, {
+    totalEvents: 0,
+    requests: 0,
+    errors: 0,
+    services: new Set(),
+    lastEvent: null,
+  }) |
+  filter((stats) => stats.errors > 0) | // Only show states with errors
+  take(2); // Take first 2 states with errors
 
 const sysStream = await sysResult.run();
 console.log('   System states when errors occurred:');
@@ -174,7 +194,9 @@ for await (const stats of sysStream) {
   console.log(`     - Total events: ${stats.totalEvents}`);
   console.log(`     - Requests: ${stats.requests}`);
   console.log(`     - Errors: ${stats.errors}`);
-  console.log(`     - Last event: ${stats.lastEvent.type} (${stats.lastEvent.message || 'N/A'})`);
+  console.log(
+    `     - Last event: ${stats.lastEvent.type} (${stats.lastEvent.message || 'N/A'})`,
+  );
 }
 
 // ============================================================================
@@ -190,12 +212,12 @@ async function* numberStream() {
 }
 
 let complexResult;
-(complexResult = pipe(numberStream()))
-  | map(x => x * 2)                    // Double each number
-  | filter(x => x > 10)                // Keep only > 10
-  | scan((sum, x) => sum + x, 0)       // Running sum
-  | filter(sum => sum > 50)            // Wait until sum > 50
-  | take(1);                           // Take first occurrence
+(complexResult = pipe(numberStream())) |
+  map((x) => x * 2) | // Double each number
+  filter((x) => x > 10) | // Keep only > 10
+  scan((sum, x) => sum + x, 0) | // Running sum
+  filter((sum) => sum > 50) | // Wait until sum > 50
+  take(1); // Take first occurrence
 
 const complexStream = await complexResult.run();
 console.log('   Running sum progression until > 50:');

@@ -31,7 +31,7 @@ export function createStreamPipes(asPipe) {
   const scan = asPipe(async function* (iterable, reducer, initialValue) {
     let accumulator = initialValue;
     let isFirst = true;
-    
+
     for await (const item of iterable) {
       if (isFirst && accumulator === undefined) {
         accumulator = item;
@@ -47,7 +47,7 @@ export function createStreamPipes(asPipe) {
   const reduce = asPipe(async (iterable, reducer, initialValue) => {
     let accumulator = initialValue;
     let isFirst = true;
-    
+
     for await (const item of iterable) {
       if (isFirst && accumulator === undefined) {
         accumulator = item;
@@ -56,7 +56,7 @@ export function createStreamPipes(asPipe) {
         accumulator = await Promise.resolve(reducer(accumulator, item));
       }
     }
-    
+
     return accumulator;
   });
 
@@ -74,7 +74,7 @@ export async function* eventStream(events) {
 export async function* mouseEventStream(events, delay = 0) {
   for (const event of events) {
     if (delay > 0) {
-      await new Promise(resolve => setTimeout(resolve, delay));
+      await new Promise((resolve) => setTimeout(resolve, delay));
     }
     yield event;
   }

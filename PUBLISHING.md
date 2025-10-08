@@ -24,11 +24,13 @@ Before the workflow can publish to npm, you need to:
 To publish a new version:
 
 1. Update the version in `package.json`:
+
    ```bash
    npm version patch  # or minor, or major
    ```
 
 2. Push the changes and tag:
+
    ```bash
    git push && git push --tags
    ```
@@ -40,6 +42,7 @@ To publish a new version:
    - Click "Publish release"
 
 The GitHub Action will automatically:
+
 - Run the test suite
 - Publish the package to npm with provenance
 - Make it publicly accessible
@@ -47,6 +50,7 @@ The GitHub Action will automatically:
 ## Manual publish (if needed)
 
 You can also trigger the workflow manually:
+
 1. Go to https://github.com/irony/aspipes/actions/workflows/publish.yml
 2. Click "Run workflow"
 3. Select the branch
