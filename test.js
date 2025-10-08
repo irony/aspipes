@@ -332,3 +332,48 @@ test('composable pipes - pipe used directly as operator', async () => {
   // (5 + 10) * 2 = 30, then 30 + 100 = 130
   assert.equal(await final.run(), 130);
 });
+
+test('asPipe with Math object - destructuring methods', async () => {
+  const { pipe, asPipe } = createAsPipes();
+  
+  const { sqrt, floor, abs } = asPipe(Math);
+
+  const result = pipe(16.7);
+  result | sqrt | floor | abs;
+  
+  // sqrt(16.7) ≈ 4.087, floor(4.087) = 4, abs(4) = 4
+  assert.equal(await result.run(), 4);
+});
+
+test('asPipe with custom object - all methods become pipeable', async () => {
+  const { pipe, asPipe } = createAsPipes();
+  
+  const calculator = {
+    add(x, n) { return x + n; },
+    multiply(x, n) { return x * n; },
+    square(x) { return x * x; }
+  };
+  
+  const { add, multiply, square } = asPipe(calculator);
+
+  const result = pipe(3);
+  result | add(2) | multiply(4) | square;
+  
+  // (3 + 2) * 4 = 20, then 20^2 = 400
+  assert.equal(await result.run(), 400);
+});
+
+test('asPipe with object - non-function properties accessible', async () => {
+  const { asPipe } = createAsPipes();
+  
+  const obj = {
+    value: 42,
+    getName() { return 'test'; }
+  };
+  
+  const wrapped = asPipe(obj);
+  
+  assert.equal(wrapped.value, 42);
+  assert.equal(typeof wrapped.getName, 'function');
+});
+

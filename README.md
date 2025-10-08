@@ -240,7 +240,37 @@ This pattern demonstrates:
 - **Abstraction**: Complex multi-step operations hidden behind simple interfaces
 - **Reusability**: Each composed pipe can be used independently or as part of larger workflows
 
-**E. Stream processing with async generators (Functional Reactive Programming)**
+**E. asPipe with objects - use existing methods as pipeable functions**
+
+A powerful feature of asPipes is the ability to use `asPipe` on objects to make all their methods pipeable:
+
+```javascript
+import { createAsPipes } from 'aspipes';
+
+const { pipe, asPipe } = createAsPipes();
+
+// Use Math object methods directly in pipelines
+const { sqrt, floor, abs, pow } = asPipe(Math);
+
+const result = pipe(16.7);
+result | sqrt | floor | abs;
+await result.run(); // 4
+
+// Create custom objects with methods
+const calculator = {
+  add(x, n) { return x + n; },
+  multiply(x, n) { return x * n; },
+  square(x) { return x * x; }
+};
+
+const { add, multiply, square } = asPipe(calculator);
+
+const calc = pipe(3);
+calc | add(2) | multiply(4) | square;
+await calc.run(); // 400 - (3 + 2) * 4 = 20, then 20² = 400
+```
+
+**F. Stream processing with async generators (Functional Reactive Programming)**
 
 The asPipes library includes stream support for working with async generators, enabling functional reactive programming patterns:
 
@@ -272,7 +302,7 @@ for await (const id of stream) {
 }
 ```
 
-**F. Mouse event stream processing**
+**G. Mouse event stream processing**
 
 ```javascript
 // Simulate mouse drag tracking
@@ -317,34 +347,49 @@ These functions work seamlessly with async generators, enabling reactive pattern
 
 ## 6 Reference Implementation
 
+The core implementation is compact and elegant:
+
 ```javascript
 export function createAsPipes() {
   const stack = [];
 
-  const asPipe = (fn) =>
-    new Proxy(function () {}, {
+  const asPipe = (fnOrObj) => {
+    // If it's an object, return a proxy that makes all methods pipeable
+    if (typeof fnOrObj === 'object' && fnOrObj !== null && typeof fnOrObj !== 'function') {
+      return new Proxy({}, {
+        get(_, prop) {
+          if (typeof fnOrObj[prop] === 'function') {
+            // Don't bind prototype methods - they need the actual value as 'this'
+            if (fnOrObj.constructor === Object.prototype.constructor || 
+                fnOrObj === Array.prototype ||
+                fnOrObj.constructor === Function.prototype.constructor) {
+              return asPipe(fnOrObj[prop]);
+            }
+            return asPipe(fnOrObj[prop].bind(fnOrObj));
+          }
+          return fnOrObj[prop];
+        }
+      });
+    }
+
+    // Original function behavior
+    const fn = fnOrObj;
+    return new Proxy(function () {}, {
       get(_, prop) {
         if (prop === Symbol.toPrimitive)
           return () => (
             stack.at(-1).steps.push(async (v) => {
-              const stackLengthBefore = stack.length;
+              const before = stack.length;
               const result = await Promise.resolve(fn(v));
-
-              // If a new pipeline was created during fn execution and result is 0
-              if (result === 0 && stack.length > stackLengthBefore) {
-                // Get the pipeline that was created and execute it
-                const pipelineCtx = stack[stack.length - 1];
-                stack.pop(); // Remove from stack as we're executing it
-                return await pipelineCtx.steps.reduce(
+              if (result === 0 && stack.length > before) {
+                const ctx = stack.pop();
+                return await ctx.steps.reduce(
                   (p, f) => p.then(f),
-                  Promise.resolve(pipelineCtx.v),
+                  Promise.resolve(ctx.v),
                 );
               }
-
-              // If the function returns a pipeline token, execute it automatically
-              if (result && typeof result.run === 'function') {
+              if (result && typeof result.run === 'function')
                 return await result.run();
-              }
               return result;
             }),
             0
@@ -354,24 +399,17 @@ export function createAsPipes() {
         const t = function () {};
         t[Symbol.toPrimitive] = () => (
           stack.at(-1).steps.push(async (v) => {
-            const stackLengthBefore = stack.length;
+            const before = stack.length;
             const result = await Promise.resolve(fn(v, ...args));
-
-            // If a new pipeline was created during fn execution and result is 0
-            if (result === 0 && stack.length > stackLengthBefore) {
-              // Get the pipeline that was created and execute it
-              const pipelineCtx = stack[stack.length - 1];
-              stack.pop(); // Remove from stack as we're executing it
-              return await pipelineCtx.steps.reduce(
+            if (result === 0 && stack.length > before) {
+              const ctx = stack.pop();
+              return await ctx.steps.reduce(
                 (p, f) => p.then(f),
-                Promise.resolve(pipelineCtx.v),
+                Promise.resolve(ctx.v),
               );
             }
-
-            // If the function returns a pipeline token, execute it automatically
-            if (result && typeof result.run === 'function') {
+            if (result && typeof result.run === 'function')
               return await result.run();
-            }
             return result;
           }),
           0
@@ -379,19 +417,27 @@ export function createAsPipes() {
         return t;
       },
     });
+  };
 
   const pipe = (x) => {
-    const ctx = { v: x, steps: [] };
+    const ctx = { v: x, steps: [], token: null };
     const token = {
       [Symbol.toPrimitive]: () => (stack.push(ctx), 0),
       async run() {
         return ctx.steps.reduce((p, f) => p.then(f), Promise.resolve(ctx.v));
       },
     };
+    ctx.token = token;
     return token;
   };
 
-  return { pipe, asPipe };
+  // fångar den pipeline som just byggdes av ett |-uttryck
+  const take = (_ignored) => {
+    const ctx = stack.pop();
+    return ctx?.token ?? _ignored; // om inget på stacken, returnera originalet
+  };
+
+  return { pipe, asPipe, take };
 }
 ```
 
