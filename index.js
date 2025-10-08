@@ -8,9 +8,9 @@ export function createAsPipes() {
         get(_, prop) {
           if (typeof fnOrObj[prop] === 'function') {
             // Don't bind prototype methods - they need the actual value as 'this'
-            if (fnOrObj.constructor === Object.prototype.constructor || 
+            if (fnOrObj.constructor === Object || 
                 fnOrObj === Array.prototype ||
-                fnOrObj.constructor === Function.prototype.constructor) {
+                fnOrObj.constructor === Function) {
               return asPipe(fnOrObj[prop]);
             }
             return asPipe(fnOrObj[prop].bind(fnOrObj));
