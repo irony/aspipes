@@ -2,6 +2,15 @@ import { createAsPipes } from './index.js';
 import { strict as assert } from 'node:assert';
 import { test } from 'node:test';
 
+test('basic example', async () => {
+  const { pipe, asPipe } = createAsPipes()
+  const upper = asPipe((s) => s.toUpperCase())
+
+  const result = pipe('hello');
+  result | upper;
+  assert.equal(await result.run(), 'HELLO')
+})
+
 test('createAsPipes returns pipe and asPipe functions', () => {
   const { pipe, asPipe } = createAsPipes();
   assert.equal(typeof pipe, 'function');
