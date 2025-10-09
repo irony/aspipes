@@ -68,6 +68,23 @@ export function createAsPipes() {
   };
 
   const pipe = (x) => {
+    // If x is a function, treat it as pipeFn behavior
+    if (typeof x === 'function') {
+      return async (...args) => {
+        const ctx = { v: args[0], steps: [], token: null };
+        const token = {
+          [Symbol.toPrimitive]: () => (stack.push(ctx), 0),
+          async run() {
+            return ctx.steps.reduce((p, f) => p.then(f), Promise.resolve(ctx.v));
+          },
+        };
+        ctx.token = token;
+        x(token, ...args.slice(1));
+        return await token.run();
+      };
+    }
+    
+    // Regular pipe behavior for values
     const ctx = { v: x, steps: [], token: null };
     const token = {
       [Symbol.toPrimitive]: () => (stack.push(ctx), 0),
