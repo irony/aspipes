@@ -377,3 +377,143 @@ test('asPipe with object - non-function properties accessible', async () => {
   assert.equal(typeof wrapped.getName, 'function');
 });
 
+test('pipeFn - basic string formatting', async () => {
+  const { asPipe, pipeFn } = createAsPipes();
+  
+  const trim = asPipe((s) => s.trim());
+  const upper = asPipe((s) => s.toUpperCase());
+  const bold = asPipe((s) => '**' + s + '**');
+  
+  const format = pipeFn((v) => v | trim | upper | bold);
+  
+  const result = await format('  hello  ');
+  assert.equal(result, '**HELLO**');
+});
+
+test('pipeFn - validation pipeline', async () => {
+  const { asPipe, pipeFn } = createAsPipes();
+  
+  const trim = asPipe((s) => typeof s === 'string' ? s.trim() : s);
+  const required = asPipe((s) => {
+    if (!s || s.length === 0) throw new Error('Field is required');
+    return s;
+  });
+  const email = asPipe((s) => {
+    if (!s.includes('@')) throw new Error('Invalid email');
+    return s;
+  });
+  
+  const validate = pipeFn((v) => v | trim | required | email);
+  
+  // Valid email
+  const result1 = await validate('  user@example.com  ');
+  assert.equal(result1, 'user@example.com');
+  
+  // Invalid email - missing @
+  await assert.rejects(
+    async () => await validate('invalid'),
+    { message: 'Invalid email' }
+  );
+  
+  // Empty string after trim
+  await assert.rejects(
+    async () => await validate('   '),
+    { message: 'Field is required' }
+  );
+});
+
+test('pipeFn - numeric transformations', async () => {
+  const { asPipe, pipeFn } = createAsPipes();
+  
+  const inc = asPipe((x) => x + 1);
+  const double = asPipe((x) => x * 2);
+  const square = asPipe((x) => x * x);
+  
+  const calculate = pipeFn((v) => v | inc | double | square);
+  
+  // (5 + 1) * 2 = 12, then 12^2 = 144
+  const result = await calculate(5);
+  assert.equal(result, 144);
+});
+
+test('pipeFn - array operations', async () => {
+  const { asPipe, pipeFn } = createAsPipes();
+  
+  const map = asPipe((arr, fn) => arr.map(fn));
+  const filter = asPipe((arr, fn) => arr.filter(fn));
+  const join = asPipe((arr, sep) => arr.join(sep));
+  
+  const process = pipeFn((v) => v | map((x) => x * 2) | filter((x) => x > 5) | join('-'));
+  
+  const result = await process([1, 2, 3, 4, 5]);
+  // Map: [2, 4, 6, 8, 10]
+  // Filter (>5): [6, 8, 10]
+  // Join: "6-8-10"
+  assert.equal(result, '6-8-10');
+});
+
+test('pipeFn - async operations', async () => {
+  const { asPipe, pipeFn } = createAsPipes();
+  
+  const asyncDouble = asPipe(async (x) => {
+    return new Promise((resolve) => {
+      setTimeout(() => resolve(x * 2), 10);
+    });
+  });
+  const inc = asPipe((x) => x + 1);
+  
+  const calculate = pipeFn((v) => v | asyncDouble | inc);
+  
+  const result = await calculate(5);
+  assert.equal(result, 11); // 5 * 2 + 1
+});
+
+test('pipeFn - library use case simulation', async () => {
+  const { asPipe, pipeFn } = createAsPipes();
+  
+  // Simulate a form library with fields
+  const form = {
+    fields: {
+      name: {
+        validate: null
+      },
+      email: {
+        validate: null
+      }
+    }
+  };
+  
+  // Define validation functions
+  const trim = asPipe((s) => typeof s === 'string' ? s.trim() : s);
+  const required = asPipe((s) => {
+    if (!s || s.length === 0) throw new Error('Required');
+    return s;
+  });
+  const minLength = asPipe((s, len) => {
+    if (s.length < len) throw new Error(`Min length ${len}`);
+    return s;
+  });
+  const email = asPipe((s) => {
+    if (!s.includes('@')) throw new Error('Invalid email');
+    return s;
+  });
+  
+  // Set up validators using the HN comment pattern
+  form.fields.name.validate = pipeFn((v) => v | trim | required | minLength(3));
+  form.fields.email.validate = pipeFn((v) => v | trim | required | email);
+  
+  // Test name validation
+  assert.equal(await form.fields.name.validate('  John  '), 'John');
+  await assert.rejects(
+    async () => await form.fields.name.validate('  ab  '),
+    { message: 'Min length 3' }
+  );
+  
+  // Test email validation
+  assert.equal(await form.fields.email.validate('  test@example.com  '), 'test@example.com');
+  await assert.rejects(
+    async () => await form.fields.email.validate('invalid'),
+    { message: 'Invalid email' }
+  );
+});
+

@@ -85,5 +85,14 @@ export function createAsPipes() {
     return ctx?.token ?? _ignored; // om inget på stacken, returnera originalet
   };
 
-  return { pipe, asPipe, take };
+  // Creates a function that can use pipe syntax inside
+  const pipeFn = (fn) => {
+    return async (...args) => {
+      const p = pipe(args[0]);
+      fn(p, ...args.slice(1));
+      return await p.run();
+    };
+  };
+
+  return { pipe, asPipe, take, pipeFn };
 }

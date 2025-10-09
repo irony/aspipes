@@ -61,8 +61,9 @@ Creates an isolated pipeline environment and returns:
 
 ```javascript
 {
-  pipe, // begin a pipeline
-  asPipe // lift a function into a pipeable form
+  pipe,    // begin a pipeline
+  asPipe,  // lift a function into a pipeable form
+  pipeFn   // create a function that uses pipe syntax internally
 }
 ```
 
@@ -91,7 +92,31 @@ Pipeable functions can also be called with arguments:
 ).run();
 ```
 
+pipeFn(fn)
+
+Creates a function that uses pipe syntax internally. Perfect for library authors who want to enable pipeline-style configuration:
+
+```javascript
+const trim = asPipe((s) => s.trim());
+const required = asPipe((s) => {
+  if (!s) throw new Error('Required');
+  return s;
+});
+const email = asPipe((s) => {
+  if (!s.includes('@')) throw new Error('Invalid email');
+  return s;
+});
+
+// Use in library APIs
+form.fields.name.validate = pipeFn((v) => v | trim | required);
+form.fields.email.validate = pipeFn((v) => v | trim | required | email);
+
+// Call like a normal function
+await form.fields.email.validate('  user@example.com  '); // → 'user@example.com'
+```
+
 Evaluates the accumulated transformations sequentially, returning a Promise of the final value.
+
 
 ## Examples
 
@@ -167,7 +192,61 @@ haiku
 console.log(await haiku.run());
 ```
 
-**D. Composable pipes (Higher-Order Pipes)**
+**D. Library use case with pipeFn**
+
+The `pipeFn` function is perfect for library authors who want to enable pipeline-style configuration. It allows users to write clean validation or transformation logic using the pipe operator inside arrow functions:
+
+```javascript
+import { createAsPipes } from 'aspipes';
+
+const { asPipe, pipeFn } = createAsPipes();
+
+// Define validation and transformation functions
+const trim = asPipe((s) => typeof s === 'string' ? s.trim() : s);
+const required = asPipe((s) => {
+  if (!s || s.length === 0) throw new Error('Field is required');
+  return s;
+});
+const email = asPipe((s) => {
+  if (!s.includes('@')) throw new Error('Invalid email');
+  return s;
+});
+const minLength = asPipe((s, len) => {
+  if (s.length < len) throw new Error(`Minimum length is ${len}`);
+  return s;
+});
+
+// Example: Form library with field validation
+const form = {
+  fields: {
+    name: {},
+    email: {}
+  }
+};
+
+// Users can configure validators with clean pipe syntax
+form.fields.name.validate = pipeFn((v) => v | trim | required | minLength(3));
+form.fields.email.validate = pipeFn((v) => v | trim | required | email);
+
+// Use validators like normal async functions
+await form.fields.name.validate('  John  ');     // → 'John'
+await form.fields.email.validate(' user@ex.com '); // → 'user@ex.com'
+
+// Validation errors are thrown as expected
+try {
+  await form.fields.email.validate('invalid');
+} catch (e) {
+  console.log(e.message); // 'Invalid email'
+}
+```
+
+This pattern enables the elegant syntax proposed in the Hacker News comment:
+```javascript
+grid.columns.name.format(pipeFn((v) => v | trim | truncate | bold));
+form.fields.name.validate(pipeFn((v) => v | trim | required | email));
+```
+
+**E. Composable pipes (Higher-Order Pipes)**
 
 Pipes can be composed into reusable, named higher-order pipes by wrapping them with `asPipe`. The implementation automatically detects and executes pipeline expressions, enabling clean, direct syntax:
 
@@ -232,7 +311,7 @@ This pattern demonstrates:
 - **Abstraction**: Complex multi-step operations hidden behind simple interfaces
 - **Reusability**: Each composed pipe can be used independently or as part of larger workflows
 
-**E. asPipe with objects - use existing methods as pipeable functions**
+**F. asPipe with objects - use existing methods as pipeable functions**
 
 A powerful feature of asPipes is the ability to use `asPipe` on objects to make all their methods pipeable:
 
@@ -262,7 +341,7 @@ calc | add(2) | multiply(4) | square;
 await calc.run(); // 400 - (3 + 2) * 4 = 20, then 20² = 400
 ```
 
-**F. Stream processing with async generators (Functional Reactive Programming)**
+**G. Stream processing with async generators (Functional Reactive Programming)**
 
 The asPipes library includes stream support for working with async generators, enabling functional reactive programming patterns:
 
