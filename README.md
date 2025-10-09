@@ -415,6 +415,10 @@ The `stream.js` module provides these generator-based aspipe functions:
 
 These functions work seamlessly with async generators, enabling reactive patterns like waiting for specific events in an endless stream.
 
+For more detailed examples, see:
+- [`library-example.js`](./library-example.js) - Comprehensive examples of using `pipeFn` for library configuration
+- [`hn-comment-example.js`](./hn-comment-example.js) - Direct implementation of the Hacker News comment syntax
+
 
 ## How the Magic Works
 
