@@ -378,20 +378,20 @@ test('asPipe with object - non-function properties accessible', async () => {
 });
 
 test('pipeFn - basic string formatting', async () => {
-  const { asPipe, pipeFn } = createAsPipes();
+  const { asPipe, pipe } = createAsPipes();
   
   const trim = asPipe((s) => s.trim());
   const upper = asPipe((s) => s.toUpperCase());
   const bold = asPipe((s) => '**' + s + '**');
   
-  const format = pipeFn((v) => v | trim | upper | bold);
+  const format = pipe((v) => v | trim | upper | bold);
   
   const result = await format('  hello  ');
   assert.equal(result, '**HELLO**');
 });
 
 test('pipeFn - validation pipeline', async () => {
-  const { asPipe, pipeFn } = createAsPipes();
+  const { asPipe, pipe } = createAsPipes();
   
   const trim = asPipe((s) => typeof s === 'string' ? s.trim() : s);
   const required = asPipe((s) => {
@@ -403,7 +403,7 @@ test('pipeFn - validation pipeline', async () => {
     return s;
   });
   
-  const validate = pipeFn((v) => v | trim | required | email);
+  const validate = pipe((v) => v | trim | required | email);
   
   // Valid email
   const result1 = await validate('  user@example.com  ');
@@ -423,13 +423,13 @@ test('pipeFn - validation pipeline', async () => {
 });
 
 test('pipeFn - numeric transformations', async () => {
-  const { asPipe, pipeFn } = createAsPipes();
+  const { asPipe, pipe } = createAsPipes();
   
   const inc = asPipe((x) => x + 1);
   const double = asPipe((x) => x * 2);
   const square = asPipe((x) => x * x);
   
-  const calculate = pipeFn((v) => v | inc | double | square);
+  const calculate = pipe((v) => v | inc | double | square);
   
   // (5 + 1) * 2 = 12, then 12^2 = 144
   const result = await calculate(5);
@@ -437,13 +437,13 @@ test('pipeFn - numeric transformations', async () => {
 });
 
 test('pipeFn - array operations', async () => {
-  const { asPipe, pipeFn } = createAsPipes();
+  const { asPipe, pipe } = createAsPipes();
   
   const map = asPipe((arr, fn) => arr.map(fn));
   const filter = asPipe((arr, fn) => arr.filter(fn));
   const join = asPipe((arr, sep) => arr.join(sep));
   
-  const process = pipeFn((v) => v | map((x) => x * 2) | filter((x) => x > 5) | join('-'));
+  const process = pipe((v) => v | map((x) => x * 2) | filter((x) => x > 5) | join('-'));
   
   const result = await process([1, 2, 3, 4, 5]);
   // Map: [2, 4, 6, 8, 10]
@@ -453,7 +453,7 @@ test('pipeFn - array operations', async () => {
 });
 
 test('pipeFn - async operations', async () => {
-  const { asPipe, pipeFn } = createAsPipes();
+  const { asPipe, pipe } = createAsPipes();
   
   const asyncDouble = asPipe(async (x) => {
     return new Promise((resolve) => {
@@ -462,14 +462,14 @@ test('pipeFn - async operations', async () => {
   });
   const inc = asPipe((x) => x + 1);
   
-  const calculate = pipeFn((v) => v | asyncDouble | inc);
+  const calculate = pipe((v) => v | asyncDouble | inc);
   
   const result = await calculate(5);
   assert.equal(result, 11); // 5 * 2 + 1
 });
 
 test('pipeFn - library use case simulation', async () => {
-  const { asPipe, pipeFn } = createAsPipes();
+  const { asPipe, pipe } = createAsPipes();
   
   // Simulate a form library with fields
   const form = {
@@ -499,8 +499,8 @@ test('pipeFn - library use case simulation', async () => {
   });
   
   // Set up validators using the HN comment pattern
-  form.fields.name.validate = pipeFn((v) => v | trim | required | minLength(3));
-  form.fields.email.validate = pipeFn((v) => v | trim | required | email);
+  form.fields.name.validate = pipe((v) => v | trim | required | minLength(3));
+  form.fields.email.validate = pipe((v) => v | trim | required | email);
   
   // Test name validation
   assert.equal(await form.fields.name.validate('  John  '), 'John');

@@ -3,7 +3,7 @@
 
 import { createAsPipes } from './index.js';
 
-const { asPipe, pipeFn } = createAsPipes();
+const { asPipe, pipe } = createAsPipes();
 
 // Define the transformation functions
 const trim = asPipe((s) => (typeof s === 'string' ? s.trim() : s));
@@ -28,7 +28,7 @@ const email = asPipe((s) => {
 const grid = {
   columns: {
     name: {
-      format: pipeFn((v) => v | trim | truncate | bold),
+      format: pipe((v) => v | trim | truncate | bold),
     },
   },
 };
@@ -36,7 +36,7 @@ const grid = {
 const form = {
   fields: {
     name: {
-      validate: pipeFn((v) => v | trim | required | email),
+      validate: pipe((v) => v | trim | required | email),
     },
   },
 };

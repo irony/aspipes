@@ -1,4 +1,4 @@
-# pipeFn Implementation Summary
+# pipe Overloading Implementation Summary
 
 ## Problem Statement
 
@@ -11,27 +11,50 @@ From a Hacker News comment, the question was posed:
 
 ## Solution
 
-Implemented a `pipeFn` helper function that enables this exact pattern. The function:
-- Takes a lambda with pipe syntax: `(v) => v | op1 | op2 | op3`
-- Returns an async function that executes the pipeline
-- Automatically handles pipeline creation and execution
+Overloaded the `pipe` function to detect when it's called with a function argument and create a pipeable function instead of a pipeline token. This provides a cleaner API by eliminating the need for a separate `pipeFn` function.
+
+The function:
+- When called with a value: Creates a pipeline token (original behavior)
+- When called with a function: Creates a pipeable function that uses pipe syntax internally
+- Returns an async function that executes the pipeline automatically
 
 ## Implementation
 
-Added to `index.js`:
+Updated `pipe` function in `index.js`:
 ```javascript
-const pipeFn = (fn) => {
-  return async (...args) => {
-    const p = pipe(args[0]);
-    fn(p, ...args.slice(1));
-    return await p.run();
+const pipe = (x) => {
+  // If x is a function, treat it as pipeFn behavior
+  if (typeof x === 'function') {
+    return async (...args) => {
+      const ctx = { v: args[0], steps: [], token: null };
+      const token = {
+        [Symbol.toPrimitive]: () => (stack.push(ctx), 0),
+        async run() {
+          return ctx.steps.reduce((p, f) => p.then(f), Promise.resolve(ctx.v));
+        },
+      };
+      ctx.token = token;
+      x(token, ...args.slice(1));
+      return await token.run();
+    };
+  }
+  
+  // Regular pipe behavior for values
+  const ctx = { v: x, steps: [], token: null };
+  const token = {
+    [Symbol.toPrimitive]: () => (stack.push(ctx), 0),
+    async run() {
+      return ctx.steps.reduce((p, f) => p.then(f), Promise.resolve(ctx.v));
+    },
   };
+  ctx.token = token;
+  return token;
 };
 ```
 
-Exported alongside `pipe` and `asPipe`:
+Removed `pipeFn` - now just export:
 ```javascript
-return { pipe, asPipe, take, pipeFn };
+return { pipe, asPipe, take };
 ```
 
 ## Usage Example
@@ -39,7 +62,7 @@ return { pipe, asPipe, take, pipeFn };
 ```javascript
 import { createAsPipes } from 'aspipes';
 
-const { asPipe, pipeFn } = createAsPipes();
+const { asPipe, pipe } = createAsPipes();
 
 // Define operations
 const trim = asPipe((s) => s.trim());
@@ -56,7 +79,7 @@ const email = asPipe((s) => {
 const form = {
   fields: {
     email: {
-      validate: pipeFn((v) => v | trim | required | email)
+      validate: pipe((v) => v | trim | required | email)
     }
   }
 };
@@ -68,15 +91,16 @@ await form.fields.email.validate('invalid'); // → throws Error('Invalid email'
 
 ## Benefits for Library Authors
 
-1. **Clean API**: Users can configure validation/transformation using intuitive pipe syntax
-2. **Composability**: Reusable operations can be easily combined
-3. **Type-safe**: Each operation receives the output of the previous one
-4. **Async-ready**: Handles promises and async operations seamlessly
-5. **Error handling**: Errors propagate naturally through the pipeline
+1. **Simpler API**: Single `pipe` function instead of separate `pipe` and `pipeFn`
+2. **Clean syntax**: Users can configure validation/transformation using intuitive pipe syntax
+3. **Composability**: Reusable operations can be easily combined
+4. **Type-safe**: Each operation receives the output of the previous one
+5. **Async-ready**: Handles promises and async operations seamlessly
+6. **Error handling**: Errors propagate naturally through the pipeline
 
 ## Test Coverage
 
-Added 6 comprehensive tests covering:
+All 6 tests updated to use overloaded `pipe` function:
 - Basic string formatting
 - Validation pipelines with error handling
 - Numeric transformations
@@ -84,27 +108,29 @@ Added 6 comprehensive tests covering:
 - Async operations
 - Real-world library use case simulation
 
-All 50 tests pass (44 original + 6 new).
+All 50 tests pass (44 original + 6 updated).
 
 ## Documentation
 
-- Updated README with Core API documentation
-- Added example section showing library use case
-- Created `library-example.js` with comprehensive examples
-- Created `hn-comment-example.js` with direct HN comment implementation
+- Updated README with Core API documentation for overloaded `pipe` function
+- Updated example section showing library use case with `pipe`
+- Updated `library-example.js` to use `pipe` instead of `pipeFn`
+- Updated `hn-comment-example.js` to use `pipe` instead of `pipeFn`
 
 ## Files Changed
 
-- `index.js`: Added `pipeFn` implementation (7 lines)
-- `test.js`: Added 6 new test cases
-- `README.md`: Updated documentation with examples
-- `library-example.js`: Created comprehensive example file
-- `hn-comment-example.js`: Created HN comment example file
+- `index.js`: Overloaded `pipe` function to detect function arguments, removed `pipeFn` export
+- `test.js`: Updated 6 test cases to use `pipe` instead of `pipeFn`
+- `README.md`: Updated documentation to explain overloaded `pipe` function
+- `library-example.js`: Updated to use `pipe` instead of `pipeFn`
+- `hn-comment-example.js`: Updated to use `pipe` instead of `pipeFn`
+- `PIPEFN-SUMMARY.md`: Updated to reflect pipe overloading approach
 
 ## Result
 
-✓ Fully implements the requested feature
-✓ Minimal code changes (core implementation is 7 lines)
+✓ Simpler API with just `pipe` instead of separate `pipeFn`
+✓ Fully implements the requested feature with overloading
+✓ Minimal code changes (integrated into existing `pipe` function)
 ✓ Comprehensive test coverage
 ✓ Well documented with examples
 ✓ All existing tests continue to pass

@@ -3,7 +3,7 @@
 
 import { createAsPipes } from './index.js';
 
-const { asPipe, pipeFn } = createAsPipes();
+const { asPipe, pipe } = createAsPipes();
 
 // ============================================================================
 // Define reusable transformation and validation functions
@@ -46,8 +46,8 @@ const grid = {
 };
 
 // Users can configure formatters with clean pipe syntax
-grid.columns.name.format = pipeFn((v) => v | trim | truncate(15) | bold);
-grid.columns.description.format = pipeFn((v) => v | trim | truncate(50));
+grid.columns.name.format = pipe((v) => v | trim | truncate(15) | bold);
+grid.columns.description.format = pipe((v) => v | trim | truncate(50));
 
 // Use formatters
 const formattedName = await grid.columns.name.format(
@@ -83,9 +83,9 @@ const form = {
 };
 
 // Users can configure validators with clean pipe syntax
-form.fields.name.validate = pipeFn((v) => v | trim | required | minLength(3));
-form.fields.email.validate = pipeFn((v) => v | trim | required | email);
-form.fields.username.validate = pipeFn(
+form.fields.name.validate = pipe((v) => v | trim | required | minLength(3));
+form.fields.email.validate = pipe((v) => v | trim | required | email);
+form.fields.username.validate = pipe(
   (v) => v | trim | required | minLength(3),
 );
 
@@ -136,7 +136,7 @@ const confirmPassword = asPipe((s, original) => {
 });
 
 form.fields.password = {
-  validate: pipeFn(
+  validate: pipe(
     (v) => v | trim | required | minLength(8) | password,
   ),
 };
@@ -165,7 +165,7 @@ const extractField = asPipe((obj, field) => obj[field]);
 const toUpperCase = asPipe((s) => s.toUpperCase());
 
 const dataProcessor = {
-  transform: pipeFn(
+  transform: pipe(
     (v) => v | trim | parseJson | extractField('name') | toUpperCase,
   ),
 };

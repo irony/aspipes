@@ -61,19 +61,47 @@ Creates an isolated pipeline environment and returns:
 
 ```javascript
 {
-  pipe,    // begin a pipeline
+  pipe,    // begin a pipeline or create a pipeable function
   asPipe,  // lift a function into a pipeable form
-  pipeFn   // create a function that uses pipe syntax internally
+  take     // capture the pipeline built by a | expression
 }
 ```
 
-pipe(initialValue)
+#### pipe(valueOrFn)
 
-Begins a new pipeline with initialValue.
+**When called with a value**, begins a new pipeline with that value.
 The returned object intercepts | operations via Symbol.toPrimitive.
 Call .run() to evaluate and retrieve the final result (async).
 
-asPipe(fn)
+```javascript
+const result = pipe('hello');
+result | upper | ex('!!!');
+await result.run(); // → "HELLO!!!"
+```
+
+**When called with a function**, creates a pipeable function that uses pipe syntax internally.
+Perfect for library authors who want to enable pipeline-style configuration:
+
+```javascript
+const trim = asPipe((s) => s.trim());
+const required = asPipe((s) => {
+  if (!s) throw new Error('Required');
+  return s;
+});
+const email = asPipe((s) => {
+  if (!s.includes('@')) throw new Error('Invalid email');
+  return s;
+});
+
+// Use in library APIs
+form.fields.name.validate = pipe((v) => v | trim | required);
+form.fields.email.validate = pipe((v) => v | trim | required | email);
+
+// Call like a normal async function
+await form.fields.email.validate('  user@example.com  '); // → 'user@example.com'
+```
+
+#### asPipe(fn)
 
 Wraps a function fn so that it can be used in a pipeline:
 
@@ -90,29 +118,6 @@ Pipeable functions can also be called with arguments:
   | upper 
   | ex('!!!')
 ).run();
-```
-
-pipeFn(fn)
-
-Creates a function that uses pipe syntax internally. Perfect for library authors who want to enable pipeline-style configuration:
-
-```javascript
-const trim = asPipe((s) => s.trim());
-const required = asPipe((s) => {
-  if (!s) throw new Error('Required');
-  return s;
-});
-const email = asPipe((s) => {
-  if (!s.includes('@')) throw new Error('Invalid email');
-  return s;
-});
-
-// Use in library APIs
-form.fields.name.validate = pipeFn((v) => v | trim | required);
-form.fields.email.validate = pipeFn((v) => v | trim | required | email);
-
-// Call like a normal function
-await form.fields.email.validate('  user@example.com  '); // → 'user@example.com'
 ```
 
 Evaluates the accumulated transformations sequentially, returning a Promise of the final value.
@@ -192,14 +197,14 @@ haiku
 console.log(await haiku.run());
 ```
 
-**D. Library use case with pipeFn**
+**D. Library use case with pipe function overloading**
 
-The `pipeFn` function is perfect for library authors who want to enable pipeline-style configuration. It allows users to write clean validation or transformation logic using the pipe operator inside arrow functions:
+When `pipe` is called with a function, it creates a pipeable function that uses pipe syntax internally. This is perfect for library authors who want to enable pipeline-style configuration:
 
 ```javascript
 import { createAsPipes } from 'aspipes';
 
-const { asPipe, pipeFn } = createAsPipes();
+const { asPipe, pipe } = createAsPipes();
 
 // Define validation and transformation functions
 const trim = asPipe((s) => typeof s === 'string' ? s.trim() : s);
@@ -225,8 +230,8 @@ const form = {
 };
 
 // Users can configure validators with clean pipe syntax
-form.fields.name.validate = pipeFn((v) => v | trim | required | minLength(3));
-form.fields.email.validate = pipeFn((v) => v | trim | required | email);
+form.fields.name.validate = pipe((v) => v | trim | required | minLength(3));
+form.fields.email.validate = pipe((v) => v | trim | required | email);
 
 // Use validators like normal async functions
 await form.fields.name.validate('  John  ');     // → 'John'
@@ -242,8 +247,8 @@ try {
 
 This pattern enables the elegant syntax proposed in the Hacker News comment:
 ```javascript
-grid.columns.name.format(pipeFn((v) => v | trim | truncate | bold));
-form.fields.name.validate(pipeFn((v) => v | trim | required | email));
+grid.columns.name.format(pipe((v) => v | trim | truncate | bold));
+form.fields.name.validate(pipe((v) => v | trim | required | email));
 ```
 
 **E. Composable pipes (Higher-Order Pipes)**
@@ -416,7 +421,7 @@ The `stream.js` module provides these generator-based aspipe functions:
 These functions work seamlessly with async generators, enabling reactive patterns like waiting for specific events in an endless stream.
 
 For more detailed examples, see:
-- [`library-example.js`](./library-example.js) - Comprehensive examples of using `pipeFn` for library configuration
+- [`library-example.js`](./library-example.js) - Comprehensive examples of using `pipe` for library configuration
 - [`hn-comment-example.js`](./hn-comment-example.js) - Direct implementation of the Hacker News comment syntax
 
 
