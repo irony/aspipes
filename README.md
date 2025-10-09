@@ -1,5 +1,6 @@
-# asPipes: working pipelines today in pure JavaScript
-https://en.wikipedia.org/wiki/File:MagrittePipe.jpg![image](https://github.com/user-attachments/assets/ade22162-5fda-4f76-a103-324c5b243d21)
+# asPipes: working pipes today in pure JavaScript
+
+![C'est nes pas un pipe](https://github.com/user-attachments/assets/ade22162-5fda-4f76-a103-324c5b243d21)
 
 ## Summary
 
