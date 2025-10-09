@@ -1,6 +1,7 @@
 # asPipes: working pipelines today in pure JavaScript
+https://en.wikipedia.org/wiki/File:MagrittePipe.jpg![image](https://github.com/user-attachments/assets/ade22162-5fda-4f76-a103-324c5b243d21)
 
-## 1 Summary
+## Summary
 
 asPipes is an experimental runtime abstraction that models the semantics of the proposed |> pipeline operator, implemented entirely in standard JavaScript (ES2020+).
 It demonstrates that pipeline-style composition can be expressed using the existing coercion semantics of the bitwise OR operator (|) and Symbol.toPrimitive.
@@ -29,7 +30,7 @@ import { createAsPipes } from 'aspipes';
 
 ⸻
 
-## 2 Motivation
+## Motivation
 
 The pipeline operator proposal (tc39/proposal-pipeline-operator) has been under discussion for several years, exploring multiple variants (F#, Smart, Hack, etc.).
 The asPipes experiment aims to:
@@ -41,7 +42,7 @@ The asPipes experiment aims to:
 
 ⸻
 
-## 3 Design Goals
+## Design Goals
 
 - ✅ Composable — each transformation behaves like a unary function of the previous result.
 - ✅ Deferred — no execution until .run() is called.
@@ -51,7 +52,7 @@ The asPipes experiment aims to:
 
 ⸻
 
-## 4 Core API
+## Core API
 
 ### createAsPipes()
 
@@ -91,7 +92,7 @@ Pipeable functions can also be called with arguments:
 
 Evaluates the accumulated transformations sequentially, returning a Promise of the final value.
 
-## 5 Examples
+## Examples
 
 **A. String pipeline**
 
@@ -335,7 +336,7 @@ The `stream.js` module provides these generator-based aspipe functions:
 These functions work seamlessly with async generators, enabling reactive patterns like waiting for specific events in an endless stream.
 
 
-## 6 How the Magic Works
+## How the Magic Works
 
 The core insight is using JavaScript's coercion system to intercept the `|` operator:
 
@@ -360,7 +361,7 @@ Key techniques:
 - **Deferred execution** via `.run()` keeps pipelines pure until needed
 - **Stack-based context** enables composable higher-order pipes
 
-## 7 Semantics
+## Semantics
 
 Each pipe() call creates a private evaluation context { v, steps[] }.
 Every pipeable function registers a transformation when coerced by |.
@@ -375,7 +376,7 @@ Evaluation order is strict left-to-right, with promise resolution between steps.
 
 ⸻
 
-## 8 Motivation and Design Notes
+## Motivation and Design Notes
 
 Why use Symbol.toPrimitive?
 Because bitwise operators force primitive coercion and can be intercepted per-object, giving a hook for sequencing without syntax modification.
