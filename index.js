@@ -1,5 +1,8 @@
 export function createAsPipes() {
   const stack = [];
+  
+  // Symbol to mark objects as pipe tokens
+  const PIPE_TOKEN = Symbol('aspipes.token');
 
   const asPipe = (fnOrObj) => {
     // If it's an object, return a proxy that makes all methods pipeable
@@ -36,7 +39,8 @@ export function createAsPipes() {
                   Promise.resolve(ctx.v),
                 );
               }
-              if (result && typeof result.run === 'function')
+              // Only auto-execute if it's actually a pipe token
+              if (result && result[PIPE_TOKEN] && typeof result.run === 'function')
                 return await result.run();
               return result;
             }),
@@ -56,7 +60,8 @@ export function createAsPipes() {
                 Promise.resolve(ctx.v),
               );
             }
-            if (result && typeof result.run === 'function')
+            // Only auto-execute if it's actually a pipe token
+            if (result && result[PIPE_TOKEN] && typeof result.run === 'function')
               return await result.run();
             return result;
           }),
@@ -70,6 +75,7 @@ export function createAsPipes() {
   const pipe = (x) => {
     const ctx = { v: x, steps: [], token: null };
     const token = {
+      [PIPE_TOKEN]: true, // Mark this as a pipe token
       [Symbol.toPrimitive]: () => (stack.push(ctx), 0),
       async run() {
         return ctx.steps.reduce((p, f) => p.then(f), Promise.resolve(ctx.v));
