@@ -53,16 +53,6 @@ The asPipes experiment aims to:
 
 ## 4 Core API
 
-### Installation and Import
-
-```bash
-npm install aspipes
-```
-
-```javascript
-import { createAsPipes } from 'aspipes';
-```
-
 ### createAsPipes()
 
 Creates an isolated pipeline environment and returns:
@@ -92,12 +82,12 @@ const ex = asPipe((s, mark = '!') => s + mark);
 Pipeable functions can also be called with arguments:
 
 ```javascript
-pipe('hello') 
+(
+  pipe('hello') 
   | upper 
-  | ex('!!!');
+  | ex('!!!')
+).run();
 ```
-
-.run()
 
 Evaluates the accumulated transformations sequentially, returning a Promise of the final value.
 
