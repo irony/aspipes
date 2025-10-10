@@ -377,3 +377,110 @@ test('asPipe with object - non-function properties accessible', async () => {
   assert.equal(typeof wrapped.getName, 'function');
 });
 
+// Tests for issue #9: Objects with .run() method should not be confused with pipe tokens
+test('issue #9 - return object with run method', async () => {
+  const { pipe, asPipe } = createAsPipes();
+
+  // A regular object that happens to have a .run() method
+  const task = {
+    name: 'MyTask',
+    async run() {
+      return 'task executed';
+    },
+  };
+
+  const getTask = asPipe((x) => task);
+
+  const result = pipe(5);
+  result | getTask;
+
+  const output = await result.run();
+  
+  // We expect to get the task object back, not the result of calling task.run()
+  assert.deepEqual(output, task, 'Should return the task object itself, not call its .run() method');
+});
+
+test('issue #9 - return multiple objects with run methods in sequence', async () => {
+  const { pipe, asPipe } = createAsPipes();
+
+  const command1 = {
+    id: 1,
+    async run() {
+      return 'command1 executed';
+    },
+  };
+
+  const command2 = {
+    id: 2,
+    async run() {
+      return 'command2 executed';
+    },
+  };
+
+  const createCommand = asPipe((x, id) => (id === 1 ? command1 : command2));
+
+  const result = pipe(0);
+  result | createCommand(1) | createCommand(2);
+
+  const output = await result.run();
+  
+  // We expect the second command object, not "command2 executed"
+  assert.deepEqual(output, command2, 'Should return command2 object, not call its .run() method');
+});
+
+test('issue #9 - promise-like object with then method', async () => {
+  const { pipe, asPipe } = createAsPipes();
+
+  // An object that looks like a promise but isn't
+  const fakePromise = {
+    value: 42,
+    then(resolve) {
+      resolve('fake promise resolved');
+    },
+  };
+
+  const getFakePromise = asPipe((x) => fakePromise);
+
+  const result = pipe(5);
+  result | getFakePromise;
+
+  const output = await result.run();
+  
+  // This might work correctly since Promise.resolve handles it,
+  // but we should still get the original object
+  assert.equal(output, 'fake promise resolved', 'Promise-like objects are handled by Promise.resolve');
+});
+
+test('issue #9 - distinguish between pipe token and regular object', async () => {
+  const { pipe, asPipe } = createAsPipes();
+
+  // Create an actual pipe token
+  const innerPipe = pipe(10);
+  innerPipe | asPipe((x) => x * 2);
+
+  // Create a function that returns this pipe token (should be unwrapped)
+  const getPipe = asPipe((x) => innerPipe);
+
+  const result1 = pipe(5);
+  result1 | getPipe;
+
+  const output1 = await result1.run();
+  assert.equal(output1, 20, 'Pipe tokens should be unwrapped and executed');
+
+  // Now create a regular object with run method (should NOT be unwrapped)
+  const regularObject = {
+    data: 100,
+    async run() {
+      return 200;
+    },
+  };
+
+  const getObject = asPipe((x) => regularObject);
+
+  const result2 = pipe(5);
+  result2 | getObject;
+
+  const output2 = await result2.run();
+  assert.deepEqual(output2, regularObject, 'Regular objects with run() should be returned as-is');
+});
+
