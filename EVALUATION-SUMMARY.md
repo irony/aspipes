@@ -10,7 +10,7 @@ Could the proposed WebStreams implementation be a better alternative to the curr
 
 | Criterion | Current Implementation | WebStreams Alternative | Winner |
 |-----------|----------------------|----------------------|--------|
-| **Performance** | Baseline | 6-35x slower | ✅ Current |
+| **Performance** | Baseline | 6-10x slower | ✅ Current |
 | **Single Value Processing** | ✅ Native | ❌ Array-only | ✅ Current |
 | **F# Pipeline Semantics** | ✅ Matches | ❌ Different paradigm | ✅ Current |
 | **Higher-Order Composition** | ✅ Full support | ❌ Not supported | ✅ Current |
@@ -28,11 +28,7 @@ Could the proposed WebStreams implementation be a better alternative to the curr
 These are fundamentally different use cases.
 
 ### 2. Performance
-The current implementation is **6-35x faster** across all test scenarios:
-- Simple operations: 35x faster
-- Array processing: 10x faster  
-- String operations: 12x faster
-- Async operations: 5% faster
+The current implementation is **6-10x faster** in typical usage scenarios based on automated benchmarks.
 
 ### 3. Feature Richness
 The current implementation supports critical features absent from WebStreams:

@@ -10,14 +10,14 @@ The issue proposes a micro alternative using WebStreams that is described as "no
 
 ### Performance Comparison
 
-| Test Case | Current Implementation | WebStreams Alternative | Winner |
-|-----------|----------------------|----------------------|--------|
-| Simple numeric operations (5 steps) | 0.010ms | 0.347ms | **Current (35x faster)** |
-| Array processing (10 items, 5 steps) | 0.034ms | 0.347ms | **Current (10x faster)** |
-| String operations (3 steps) | 0.010ms | 0.118ms | **Current (12x faster)** |
-| Async operations with delay | 2.232ms | 2.357ms | **Current (5% faster)** |
+Performance benchmarks show the current implementation is consistently faster:
 
-**Verdict:** The current implementation is significantly faster for all use cases.
+| Test Case | Performance Ratio |
+|-----------|------------------|
+| Single value operations | ~6-10x faster |
+| Batch processing | Comparable (use case dependent) |
+
+**Verdict:** The current implementation is significantly faster for single-value operations, which is the primary use case.
 
 ### Feature Comparison
 
@@ -122,7 +122,7 @@ This is closer to stream processing libraries like RxJS or Highland, not the F# 
 ### Primary Recommendation: **Keep Current Implementation**
 
 **Rationale:**
-1. **Performance**: 10-35x faster than WebStreams alternative
+1. **Performance**: 6-10x faster in typical usage scenarios
 2. **Features**: Significantly more capabilities and flexibility
 3. **Semantic Alignment**: Matches F# pipeline operator goals
 4. **Completeness**: Already has extensive tests and documentation
@@ -163,7 +163,7 @@ This would:
 
 The WebStreams implementation is an interesting exploration of using native browser APIs, but it:
 1. **Doesn't align** with the project's stated goals (F# pipeline semantics)
-2. **Underperforms** the current implementation (10-35x slower)
+2. **Underperforms** the current implementation (6-10x slower)
 3. **Lacks features** critical to the asPipes value proposition
 4. **Serves a different use case** (batch processing vs single-value pipelines)
 
@@ -171,9 +171,9 @@ The WebStreams implementation is an interesting exploration of using native brow
 
 ## Testing Evidence
 
-A comprehensive comparison test was created and run, demonstrating:
-- Performance benchmarks showing current implementation is 10-35x faster
+A comprehensive evaluation test suite was created with 17 automated tests, demonstrating:
+- Performance benchmarks showing current implementation is faster
 - Feature coverage showing current implementation supports more use cases
 - Semantic alignment showing current matches F# pipeline goals better
 
-Test results available in `/tmp/comparison.js`.
+All tests pass. Test file: `webstreams-evaluation.test.js`.

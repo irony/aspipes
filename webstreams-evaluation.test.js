@@ -24,7 +24,7 @@ function createWebStreamPipes() {
         for (const item of items) controller.enqueue(item);
         controller.close();
       },
-    })
+    });
     pipeline.forEach((unit) => stream = stream.pipeThrough(unit.toStream()));
     
     // Collect results from the stream
@@ -201,28 +201,36 @@ describe('Performance Comparison', () => {
   test('current implementation is faster for single operations', async () => {
     const iterations = 100;
     
+    // Setup instances once
+    const { pipe: currentPipe, asPipe } = createAsPipes();
+    const inc = asPipe((x) => x + 1);
+    
     // Current implementation
     const start1 = performance.now();
     for (let i = 0; i < iterations; i++) {
-      const { pipe, asPipe } = createAsPipes();
-      const inc = asPipe((x) => x + 1);
-      const p = pipe(0);
+      const p = currentPipe(0);
       p | inc | inc | inc;
       await p.run();
     }
     const time1 = performance.now() - start1;
     
-    // WebStreams alternative
+    // WebStreams alternative - setup once
+    const $ = createWebStreamPipes();
+    const inc1 = $(x => x + 1);
+    const inc2 = $(x => x + 1);
+    const inc3 = $(x => x + 1);
+    inc1 | inc2 | inc3;
+    
+    // WebStreams benchmark
     const start2 = performance.now();
     for (let i = 0; i < iterations; i++) {
-      const $ = createWebStreamPipes();
-      $(x => x + 1) | $(x => x + 1) | $(x => x + 1);
       await $.run([0]);
     }
     const time2 = performance.now() - start2;
     
+    const speedup = time2 / time1;
     console.log(`  Current: ${time1.toFixed(2)}ms, WebStreams: ${time2.toFixed(2)}ms`);
-    console.log(`  Current is ${(time2/time1).toFixed(1)}x faster`);
+    console.log(`  Current is ${speedup.toFixed(1)}x faster`);
     
     // Current implementation should be significantly faster
     assert.ok(time1 < time2 * 0.5, 'Current implementation should be at least 2x faster');
@@ -265,7 +273,7 @@ test('Evaluation Summary', () => {
   const summary = {
     recommendation: 'Keep current implementation',
     reasons: [
-      'Performance: 10-35x faster',
+      'Performance: 6-10x faster in benchmarks',
       'Features: Higher-order composition, parameterized functions, object integration',
       'Semantics: Matches F# pipeline operator (single values, not arrays)',
       'Flexibility: Works with values, promises, and async generators',
